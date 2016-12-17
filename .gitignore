@@ -1,0 +1,22 @@
+# host,port, user password
+testdata.txt
+previous_state.json
+state.log
+.vscode
+
+# ignore files in current dir
+snap
+record
+
+# ignore zip files
+**/.zip
+**.zip
+
+# ignore pycache
+__pycache__
+**.pyc
+
+#ignore pyinstaller files
+dist
+build
+*.spec
