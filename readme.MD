@@ -1,14 +1,15 @@
 This little python project was created for usage with a foscam camera.  
 To list the dirs, copy them to local disk of choice .
 
-**Optional**:
+**Features**:
 
 * Deleting the remote files to clear up space.
 * Zip the files locally.
-* Sort the files locally.
+* Delete the files locally after zipping.
+* Limit the number of files downloaded.
 * Set the output dir, default is current directory.
 
-## Set the following in testdata.txt
+## Set the following in settings.conf
 
 ```
 host:<host>  
@@ -23,20 +24,12 @@ To get the `<model_serial>` folder name connect to the ftp server and look under
 The `<port>` field seems to default to `50021`.
 
 
-Roadmap
-Add option to limit number of files pulled
-Add option to store file sizes and compare to disk stored to determine state of file.
-Add logger
-Add threading for zipping locally and downloading
-
-Decisions:
-Organize the zips based on foscam folders or other means?
-Should we predetermine how many files one zip must contain? (for even spreading)
-Should we zip after we got the amount of files needed for 1 zip file? (concurrent?)
-
+# Roadmap
+1. Add option to store file sizes and compare to disk stored to determine state of file.
+2. Add threading for zipping locally and downloading.
 
 # Building for Windows
 ```
-	pip install pyinstaller
-	pyinstaller.exe main.py --noconfirm --onefile
+pip install pyinstaller
+pyinstaller.exe main.py --noconfirm --onefile
 ```
