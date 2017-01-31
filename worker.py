@@ -3,6 +3,7 @@ import logging
 import lzma
 import os
 import time
+import shutil
 
 from ftplib import FTP
 from ftplib import error_perm
@@ -102,8 +103,8 @@ class Worker:
                 self.logger.info("zipping "+fname+" folder... ")
             else:
                 return
-            if(not os.path.isfile(self.output_path+"../"+fname+'.zip')):
-                with ZipFile(self.output_path+"../"+fname+'.zip', 'w',compression=ZIP_LZMA) as myzip:
+            if(not os.path.isfile(self.output_path+fname+'.zip')):
+                with ZipFile(self.output_path+fname+'.zip', 'w',compression=ZIP_LZMA) as myzip:
                     for filex in os.listdir():
                         self.logger.debug(filex)
                         myzip.write(filex)
@@ -117,27 +118,27 @@ class Worker:
 
     def delete_remote_folder(self,connection,fullpath,folder):
         try:
-            self.set_remote_folder_fullpath(fullpath)
+            self.set_remote_folder_fullpath(connection,fullpath)
             connection.rmd(folder)
         except error_perm as perm:
             if("550" in perm.__str__()):
                 self.logger.debug("Recursive strategy")
                 """ Recursive strategy to clean folder """
-                self.set_remote_folder_fullpath(fullpath+"/"+folder)
+                self.set_remote_folder_fullpath(connection,fullpath+"/"+folder)
                 dir_list = connection.mlsd()
                 for dirt,dir_desc in dir_list:
-                    self.set_remote_folder_fullpath(fullpath+"/"+folder+"/"+dirt)
+                    self.set_remote_folder_fullpath(connection,fullpath+"/"+folder+"/"+dirt)
                     file_list = connection.mlsd()
                     for file,desc in file_list:
                         if(desc['type'] != "dir"):
                             if(file != "." and file != ".."):
                                 connection.delete(file)
                     if(dirt != "." and dirt != ".."):
-                        self.set_remote_folder_fullpath(fullpath+"/"+folder)
+                        self.set_remote_folder_fullpath(connection,fullpath+"/"+folder)
                         self.logger.debug("Removing subdir: "+dirt)
                         connection.rmd(dirt)
                 self.logger.debug("deleting top folder")
-                self.set_remote_folder_fullpath(fullpath)
+                self.set_remote_folder_fullpath(connection,fullpath)
                 connection.rmd(folder)
 
     def get_recorded_footage(self,connection):
@@ -183,7 +184,7 @@ class Worker:
                 self.zipped_folders[folder] = {"zipped":0,"remote_deleted":0,"local_deleted":0}
                 self.zip_and_delete(connection,folder)
 
-    def zip_and_delete(self,folder):
+    def zip_and_delete(self,connection,folder):
         if(self.zipped_folders[folder]['zipped'] == 0 and self.zip_files == True):
             self.zip_local_files_folder(folder)
             self.zipped_folders[folder]['zipped'] = 1

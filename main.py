@@ -1,6 +1,5 @@
 import sys
 import socket
-import shutil
 import logging
 import traceback
 
