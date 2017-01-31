@@ -2,6 +2,7 @@ import sys
 import socket
 import logging
 import traceback
+import argparse
 
 # own classes
 from progress import Progress
@@ -11,21 +12,27 @@ from constant import Constant
 
 progress = None
 connection = None
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+logger = None
 
 def main():
     try:
-        parser = CommandParser()
         global progress
-        progress = Progress()
+        global logger
+        parser = CommandParser()
         args = parser.commandline_args()
+        if(isinstance(args.__class__, type(argparse.ArgumentParser))):
+            args = args.__dict__
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+        if args["verbose"]:
+            ch.setLevel(logging.INFO)
+        else:
+            ch.setLevel(logging.WARNING)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+        progress = Progress()
         worker = Worker(progress,args)
         conf = parser.read_conf()
         con = worker.open_connection(conf)

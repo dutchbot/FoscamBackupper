@@ -1,4 +1,3 @@
-import argparse
 import logging
 import lzma
 import os
@@ -23,8 +22,6 @@ class Worker:
 
     def __init__(self,progress,args):
         self.progress = progress
-        if(isinstance(args.__class__, type(argparse.ArgumentParser))):
-            args = args.__dict__
         self.logger.debug(isinstance(args.__class__, type(None)))
         self.zipped_folders = {}
         self.zip_files = args["zip_files"]
@@ -100,28 +97,32 @@ class Worker:
         if os.path.exists(self.output_path+output):
             if(os.path.exists(self.output_path+folder)):
                 os.chdir(self.output_path+folder)
-                self.logger.info("zipping "+fname+" folder... ")
             else:
                 return
-            if(not os.path.isfile(self.output_path+fname+'.zip')):
-                with ZipFile(self.output_path+fname+'.zip', 'w',compression=ZIP_LZMA) as myzip:
+            if(not os.path.isfile(self.output_path+folder+'.zip')):
+                self.logger.info("Creating zip file at: " + self.output_path+folder+'.zip')
+                with ZipFile(self.output_path+folder+'.zip', 'w',compression=ZIP_LZMA) as myzip:
                     for filex in os.listdir():
                         self.logger.debug(filex)
                         myzip.write(filex)
         os.chdir("../../")
                     
     def delete_local_folder(self,path):
-       shutil.rmtree(self.output_path+path, ignore_errors=True)
+        self.logger.debug("Deleting local folder..")
+        shutil.rmtree(self.output_path+path, ignore_errors=True)
 
     def set_remote_folder_fullpath(self,connection,fullpath):
         connection.sendcmd(fullpath)
 
     def delete_remote_folder(self,connection,fullpath,folder):
         try:
+            self.logger.info("Deleting remote folder..")
             self.set_remote_folder_fullpath(connection,fullpath)
             connection.rmd(folder)
         except error_perm as perm:
-            if("550" in perm.__str__()):
+            if "No such file or directory" in perm.__str__():
+                self.logger.error("Folder does not exist remotely, perhaps previously deleted?")
+            elif("550" in perm.__str__()):
                 self.logger.debug("Recursive strategy")
                 """ Recursive strategy to clean folder """
                 self.set_remote_folder_fullpath(connection,fullpath+"/"+folder)
