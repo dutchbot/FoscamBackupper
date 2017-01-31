@@ -10,6 +10,8 @@ class Progress:
     done_files = 1
     done_folders = []
     done_progress = {}
+    current_mode = None
+    cur_folder = ""
 
     def __init__(self):
         previous = "previous_state.json"
@@ -28,7 +30,22 @@ class Progress:
                 for line in content:
                     self.done_progress[line[:-1]] = {"done":1,"path":line[:-1]}
                     self.done_folders.append(line[:-1])
+    
+    # getters/setters
+    def set_max_files(self,max_files):
+        self.max_files = max_files
 
+    def set_current_mode(self,cur_mode):
+        self.cur_mode = cur_mode
+    
+    def set_cur_folder(self,cur_folder):
+        self.cur_folder = cur_folder
+    
+    def get_cur_folder(self):
+        return self.cur_folder
+
+    #end
+    
     def check_for_previous_progress(self,prefix,folder,filename):
         try:
             if(self.done_progress[prefix+"/"+folder][filename] == 1):
@@ -44,9 +61,6 @@ class Progress:
             if(folder == mode+"/"+foldername):
                 return True
         return False
-
-    def set_max_files(self,max_files):
-        self.max_files = max_files
 
     def is_max_files_reached(self):
         logger.debug("max_files: " + str(self.max_files))
@@ -94,19 +108,19 @@ class Progress:
             else:
                 tmp.append(folder["path"])
         return tmp
-
+    
     # save the progress of the last folder
-    def save_progress_for_unfinished(self,cur_folder):
+    def save_progress_for_unfinished(self,folder):
         try:
             logger.debug(self.done_folders)
             for dir in self.done_folders:
-                if(dir == cur_folder):
+                if(dir == folder):
                     return
-            last_file = self.done_progress[cur_folder]
+            last_file = self.done_progress[folder]
             cur_file = open("previous_state.json","w")
             enc = json.dumps(last_file)
             cur_file.write(enc)
         except:
-            logger.warning("Key: "+cur_folder)
+            logger.warning("Key: "+folder)
             logger.warning("Key error in save_progress_for_unfinished")
             logger.warning(self.done_progress)
