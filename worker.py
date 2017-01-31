@@ -2,6 +2,7 @@ import argparse
 import logging
 import lzma
 import os
+import time
 
 from ftplib import FTP
 from ftplib import error_perm
@@ -43,6 +44,20 @@ class Worker:
         self.dry_run = args["dry_run"]
         self.delete_local_f = args["delete_local_f"]
 
+    def check_currently_recording(self,connection):
+        base = "CWD "+"/"+Constant.f_folder
+        connection.sendcmd(base)
+        dir_list = connection.mlsd()
+        for dir,detail in dir_list:
+            if dir == ".SdRec":
+                connection.retrbinary("RETR "+dir,self.read_sdrec_content)
+                break
+
+    def read_sdrec_content(self,bin):
+        if(time.strftime("%Y%m%d") == bin.decode('ascii').split("_")[0]):
+            self.logger.info("Skipping current date, because currently recording.")
+            self.conf.currently_recording = True
+
     def update_conf(self,conf):
         self.conf = conf
 
@@ -53,6 +68,9 @@ class Worker:
         connection.set_pasv(False)
         connection.connect(conf.host, conf.port)
         connection.login(conf.username,conf.password)
+
+        self.check_currently_recording(connection)
+
         return connection
 
     def close_connection(self,connection):
@@ -94,10 +112,10 @@ class Worker:
     def delete_local_folder(self,path):
        shutil.rmtree(self.output_path+path, ignore_errors=True)
 
-    def set_remote_folder_fullpath(self,fullpath):
+    def set_remote_folder_fullpath(self,connection,fullpath):
         connection.sendcmd(fullpath)
 
-    def delete_remote_folder(self,fullpath,folder):
+    def delete_remote_folder(self,connection,fullpath,folder):
         try:
             self.set_remote_folder_fullpath(fullpath)
             connection.rmd(folder)
@@ -139,6 +157,10 @@ class Worker:
         # Snapshot folders are also ordered by time periods
         for pdir,desc in tmp:
             if(desc['type'] == 'dir'):
+                if(self.conf.currently_recording):
+                    if (time.strftime("%Y%m%d") == pdir):
+                        self.logger.info("Skipping current recording folder: " + pdir)
+                        continue
                 self.logger.debug(pdir)
                 self.set_remote_folder(connection,mode["int_mode"],"/"+pdir)
                 if(self.progress.check_done_folder(mode["folder"],pdir) == False):
@@ -146,9 +168,9 @@ class Worker:
                     self.crawl_files(connection.mlsd(),connection,False,mode,pdir)
                 else:
                      self.logger.debug("skipping folder")
-                self.check_done_folders_zip_and_delete(mode["folder"])
+                self.check_done_folders_zip_and_delete(connection,mode["folder"])
 
-    def check_done_folders_zip_and_delete(self,output_dir):
+    def check_done_folders_zip_and_delete(self,connection,output_dir):
         self.logger.debug("called zip and delete")
         done_folders = sorted(self.progress.check_folders_done(),reverse=True)
         self.logger.debug(done_folders)
@@ -156,10 +178,10 @@ class Worker:
         self.logger.debug(self.zipped_folders)
         for folder in done_folders:
             try:
-                self.zip_and_delete(folder)
+                self.zip_and_delete(connection,folder)
             except KeyError:
                 self.zipped_folders[folder] = {"zipped":0,"remote_deleted":0,"local_deleted":0}
-                self.zip_and_delete(folder)
+                self.zip_and_delete(connection,folder)
 
     def zip_and_delete(self,folder):
         if(self.zipped_folders[folder]['zipped'] == 0 and self.zip_files == True):
@@ -177,13 +199,12 @@ class Worker:
         if(self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm == True ):
             if not self.dry_run:
                 fullpath = "CWD "+"/"+Constant.f_folder+"/"+self.conf.model+"/"+folder.split("/")[0]
-                self.delete_remote_folder(fullpath,folder.split("/")[1])
+                self.delete_remote_folder(connection,fullpath,folder.split("/")[1])
                 self.zipped_folders[folder]['remote_deleted'] = 1
             else:
                 self.zipped_folders[folder]['remote_deleted'] = 1
                 self.logger.debug("Deleted: "+folder)
 
-    # more like crawl..
     def crawl_files(self,file_list,connection,recurse,mode,parent_dir=""):
         for filename,desc in file_list:
             # do not add the time period folders
@@ -220,6 +241,5 @@ class Worker:
                         os.makedirs(self.output_path+folder)
                     cur_file = open (self.output_path+folder+"/"+filename, "w+b")
                     wrapper.set_cur_file(cur_file)
-                    #optional restart option rest
                     connection.retrbinary("RETR "+filename,wrapper.write_to_file)
                     self.progress.add_file_done(folder,filename)

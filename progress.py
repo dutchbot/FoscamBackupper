@@ -45,7 +45,7 @@ class Progress:
         return self.cur_folder
 
     #end
-    
+
     def check_for_previous_progress(self,prefix,folder,filename):
         try:
             if(self.done_progress[prefix+"/"+folder][filename] == 1):
