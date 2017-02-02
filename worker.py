@@ -79,6 +79,18 @@ class Worker:
         self.get_snapshot_footage(connection)
         self.logger.info("finished downloading files")
 
+    def get_recorded_footage(self,connection):
+        mode = {"wanted_files":Constant.wanted_files,"folder":Constant.record_folder,"int_mode":0}
+        self.set_remote_folder(connection,0)
+        self.progress.current_mode = Constant.record_folder
+        self.get_footage(connection,mode)
+
+    def get_snapshot_footage(self,connection):
+        mode = {"wanted_files":Constant.wanted_files_snap,"folder":Constant.snap_folder,"int_mode":1}
+        self.set_remote_folder(connection,1)
+        self.progress.current_mode = Constant.snap_folder
+        self.get_footage(connection,mode)
+
     def set_remote_folder(self,connection,mode,extra_folder = None):
         base = "CWD "+"/"+Constant.f_folder+"/"+self.conf.model+"/"
         if(extra_folder == None):
@@ -88,6 +100,7 @@ class Worker:
             connection.sendcmd(base+Constant.record_folder+extra_folder)
         elif (mode == 1):
             self.logger.debug("Snap folder selected!")
+            self.logger.debug(base+Constant.snap_folder+extra_folder)
             connection.sendcmd(base+Constant.snap_folder+extra_folder)
                     
     def zip_local_files_folder(self,folder):
@@ -141,18 +154,6 @@ class Worker:
                 self.logger.debug("deleting top folder")
                 self.set_remote_folder_fullpath(connection,fullpath)
                 connection.rmd(folder)
-
-    def get_recorded_footage(self,connection):
-        mode = {"wanted_files":Constant.wanted_files,"folder":Constant.record_folder,"int_mode":0}
-        self.set_remote_folder(connection,0)
-        self.progress.current_mode = Constant.record_folder
-        self.get_footage(connection,mode)
-
-    def get_snapshot_footage(self,connection):
-        mode = {"wanted_files":Constant.wanted_files_snap,"folder":Constant.snap_folder,"int_mode":1}
-        self.set_remote_folder(connection,1)
-        self.progress.current_mode = Constant.snap_folder
-        self.get_footage(connection,mode)
     
     def get_footage(self,connection,mode):
         tmp = connection.mlsd()
@@ -236,7 +237,7 @@ class Worker:
             check = filename.split(".")
             if(len(check) > 1):
                 check = filename.split(".")[1]
-                if(check == Constant.wanted_files[0] or check == Constant.wanted_files[1]):
+                if(check == wanted_files[0] or check == wanted_files[1]):
                     wrapper = FileWrapper()
                     folder = folder +"/"+parent_dir
                     if not os.path.exists(self.output_path+folder):

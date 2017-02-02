@@ -65,8 +65,6 @@ class Progress:
         return False
 
     def is_max_files_reached(self):
-        self.logger.debug("max_files: " + str(self.max_files))
-        self.logger.debug("done files: "+ str(self.done_files))
         if(self.max_files != -1):
             return self.max_files <= self.done_files
         else:
