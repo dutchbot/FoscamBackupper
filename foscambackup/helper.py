@@ -5,16 +5,13 @@ def check_dat_file(filename):
     """ check for dat file """
     return not ".dat" in filename
 
-
 def check_not_curup_dir(filename):
     """ check for current dir or parent dir"""
     return not ".." in filename and not "." in filename
 
-
 def check_file_type(desc):
     """ check if file desc is dir """
     return desc['type'] != 'dir'
-
 
 def retrieve_split(split, val):
     """ Split compare to val """

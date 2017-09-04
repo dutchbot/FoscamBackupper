@@ -1,2 +1,1 @@
-ftplib
-pyftpdlib
+pyftpdlib==1.5.2

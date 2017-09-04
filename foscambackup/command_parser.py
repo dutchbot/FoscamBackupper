@@ -11,7 +11,7 @@ class CommandParser:
     def commandline_args():
         """ Commands and descriptions """
         parser = argparse.ArgumentParser(
-            description='Download and retrieve recordings and snapshots from foscam webcamera,' /
+            description='Download and retrieve recordings and snapshots from foscam webcamera,' \
             'pass command line arguments for zipping and sorting.')
         parser.add_argument('-o', dest="output_path", action="store",
                             default="", help='The absolute directory to output the files to.')
