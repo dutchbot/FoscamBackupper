@@ -27,9 +27,17 @@ The `<port>` field seems to default to `50021`.
 # Roadmap
 1. Add option to store file sizes and compare to disk stored to determine state of file.
 2. Add threading for zipping locally and downloading.
+3. Set verbosity from commandline 
+4. Implement CI
+5. Mock / test with ftp server
+6. add test for zipping,
 
 # Building for Windows
 ```
 pip install pyinstaller
 pyinstaller.exe main.py --noconfirm --onefile
 ```
+
+# exec test
+
+python -m unittest test\test_connection.py
