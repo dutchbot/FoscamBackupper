@@ -6,3 +6,6 @@ class FileWrapper:
 
     def write_to_file(self,binaries):
         self.cur_file.write(binaries)
+    
+    def close_file(self):
+        self.cur_file.close()

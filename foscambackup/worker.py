@@ -1,7 +1,6 @@
 """ WORKER """
 import logging
 import os
-import time
 import shutil
 import threading
 
@@ -52,7 +51,7 @@ class Worker:
 
     def check_currently_recording(self, connection):
         """ Read the Sdrec file, which contains the current recording date """
-        base = self.select_folder()
+        base = helper.select_folder()
         connection.sendcmd(base)
         dir_list = connection.mlsd()
         for directory, _ in dir_list:
@@ -62,7 +61,7 @@ class Worker:
                 break
 
     def read_sdrec_content(self, file_handle):
-        if time.strftime("%Y%m%d") == file_handle.decode('ascii').split("_")[0]:
+        if helper.get_current_date() == file_handle.decode('ascii').split("_")[0]:
             self.log_info(
                 "Skipping current date, because currently recording.")
             self.conf.currently_recording = True
@@ -91,30 +90,29 @@ class Worker:
         self.log_info("finished downloading files")
 
     def get_recorded_footage(self, connection):
-        mode = {"wanted_files": Constant.wanted_files,
+        mode = {"wanted_files": Constant.wanted_files_record,
                 "folder": Constant.record_folder, "int_mode": 0}
-        self.set_remote_folder(connection, 0)
+        self.set_remote_working_folder(connection, 0)
         self.progress.current_mode = Constant.record_folder
         self.get_footage(connection, mode)
 
     def get_snapshot_footage(self, connection):
         mode = {"wanted_files": Constant.wanted_files_snap,
                 "folder": Constant.snap_folder, "int_mode": 1}
-        self.set_remote_folder(connection, 1)
+        self.set_remote_working_folder(connection, 1)
         self.progress.current_mode = Constant.snap_folder
         self.get_footage(connection, mode)
 
-    def set_remote_folder(self, connection, mode, extra_folder=None):
-        base = self.select_folder([self.conf.model])
+    def set_remote_working_folder(self, connection, mode, extra_folder=None):
+        """ Set the remote folder to work from """
         if extra_folder is None:
             extra_folder = ""
         if mode == 0:
             self.log_debug("Record folder selected!")
-            connection.sendcmd(base + Constant.record_folder + extra_folder)
+            connection.sendcmd(helper.select_folder([self.conf.model,Constant.record_folder]) + extra_folder)
         elif mode == 1:
             self.log_debug("Snap folder selected!")
-            self.log_debug(base + Constant.snap_folder + extra_folder)
-            connection.sendcmd(base + Constant.snap_folder + extra_folder)
+            connection.sendcmd(helper.select_folder([self.conf.model,Constant.snap_folder]) + extra_folder)
 
     def zip_local_files_folder(self, folder):
         split = folder.split("/")
@@ -147,7 +145,7 @@ class Worker:
     def delete_remote_folder(self, connection, fullpath, folder):
         try:
             self.log_info("Deleting remote folder..")
-            self.set_remote_folder_fullpath(connection, fullpath)
+            helper.set_remote_folder_fullpath(connection, fullpath)
             connection.rmd(folder)
             self.zipped_folders[folder]['remote_deleted'] = 1
         except error_perm as perm:
@@ -155,13 +153,13 @@ class Worker:
                 self.logger.error(
                     "Folder does not exist remotely, perhaps previously deleted?")
             elif "550" in perm.__str__():
-                self.log_debug("Recursive strategy")
+                self.log_info("Recursive strategy")
                 """ Recursive strategy to clean folder """
-                self.set_remote_folder_fullpath(
+                helper.set_remote_folder_fullpath(
                     connection, fullpath + "/" + folder)
                 dir_list = connection.mlsd()
                 for dirt, _ in dir_list:
-                    self.set_remote_folder_fullpath(
+                    helper.set_remote_folder_fullpath(
                         connection, fullpath + "/" + folder + "/" + dirt)
                     file_list = connection.mlsd()
                     for file, desc in file_list:
@@ -169,12 +167,12 @@ class Worker:
                             if file != "." and file != "..":
                                 connection.delete(file)
                     if dirt != "." and dirt != "..":
-                        self.set_remote_folder_fullpath(
+                        helper.set_remote_folder_fullpath(
                             connection, fullpath + "/" + folder)
                         self.log_debug("Removing subdir: " + dirt)
                         connection.rmd(dirt)
                 self.log_debug("deleting top folder")
-                self.set_remote_folder_fullpath(connection, fullpath)
+                helper.set_remote_folder_fullpath(connection, fullpath)
                 connection.rmd(folder)
                 self.zipped_folders[folder]['remote_deleted'] = 1
 
@@ -182,14 +180,14 @@ class Worker:
         tmp = connection.mlsd()
         # Snapshot folders are also ordered by time periods
         for pdir, desc in tmp:
-            if helper.check_file_type(desc):
+            if helper.check_file_type_dir(desc):
                 if self.conf.currently_recording:
-                    if time.strftime("%Y%m%d") == pdir:
+                    if helper.get_current_date() == pdir:
                         self.log_info(
                             "Skipping current recording folder: " + pdir)
                         continue
                 self.log_debug(pdir)
-                self.set_remote_folder(
+                self.set_remote_working_folder(
                     connection, mode["int_mode"], "/" + pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.set_cur_folder(pdir)
@@ -230,7 +228,7 @@ class Worker:
 
         if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
             if not self.dry_run:
-                fullpath = self.select_folder(
+                fullpath = helper.select_folder(
                     [self.conf.model, folder.split("/")[0]])
                 self.delete_remote_folder(
                     connection, fullpath, folder.split("/")[1])
@@ -241,7 +239,7 @@ class Worker:
     def crawl_files(self, file_list, connection, mode, parent_dir=""):
         for filename, desc in file_list:
             # do not add the time period folders
-            if helper.check_file_type(desc) and helper.check_dat_file(filename) and helper.check_not_curup_dir(filename):
+            if not helper.check_file_type_dir(desc) and helper.check_dat_file(filename) and helper.check_not_curup_dir(filename):
                 if self.progress.check_for_previous_progress(mode["folder"], parent_dir, filename):
                     self.log_debug("skipping: " + filename)
                     continue
@@ -258,12 +256,12 @@ class Worker:
                 tmp = connection.mlsd()
                 self.crawl_files(tmp, connection, mode, parent_dir)
 
-    def traverse_folder(self, connection, mode, parent_dir, filename):
+    def traverse_folder(self, connection, mode, parent_dir, subdir):
         if parent_dir != "":
-            self.set_remote_folder(
-                connection, mode, "/" + parent_dir + "/" + filename)
+            self.set_remote_working_folder(
+                connection, mode, "/" + parent_dir + "/" + subdir)
         else:
-            self.set_remote_folder(connection, mode, "/" + filename)
+            self.set_remote_working_folder(connection, mode, "/" + subdir)
 
     def retrieve_and_write_file(self, connection, parent_dir, filename, desc, wanted_files, folder):
         if desc['type'] == 'file':
@@ -278,6 +276,11 @@ class Worker:
                     cur_file = open(self.output_path +
                                     folder + "/" + filename, "w+b")
                     wrapper.set_cur_file(cur_file)
-                    connection.retrbinary(
-                        "RETR " + filename, wrapper.write_to_file)
+                    try:
+                        connection.retrbinary("RETR " + filename, wrapper.write_to_file)
+                    except error_perm as e:
+                        print(connection.cwd(""))
+                        print(filename)
+                        self.log_debug(filename + e.__str__())
+                    wrapper.close_file()
                     self.progress.add_file_done(folder, filename)

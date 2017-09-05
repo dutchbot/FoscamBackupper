@@ -1,4 +1,5 @@
 """ Contains helper functions """
+import time
 from foscambackup.constant import Constant
 
 def check_dat_file(filename):
@@ -9,9 +10,9 @@ def check_not_curup_dir(filename):
     """ check for current dir or parent dir"""
     return not ".." in filename and not "." in filename
 
-def check_file_type(desc):
+def check_file_type_dir(desc):
     """ check if file desc is dir """
-    return desc['type'] != 'dir'
+    return desc['type'] == 'dir'
 
 def retrieve_split(split, val):
     """ Split compare to val """
@@ -19,7 +20,7 @@ def retrieve_split(split, val):
 
 def select_folder(folders=[]):
     """ Set remote folder command """
-    base = "CWD " + "/" + Constant.f_folder
+    base = "CWD " + "/" + Constant.base_folder
     for folder in folders:
         base = base + "/" + folder
     return base
@@ -27,3 +28,12 @@ def select_folder(folders=[]):
 def set_remote_folder_fullpath(connection, fullpath):
     """ Set remote folder """
     connection.sendcmd(fullpath)
+
+def get_current_date():
+    return time.strftime("%Y%m%d")
+
+def get_current_date_time():
+    return time.strftime("%Y%m%d_%H%M%S")
+
+def get_current_date_time_rounded():
+    return time.strftime("%Y%m%d_%H0000")

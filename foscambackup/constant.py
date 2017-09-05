@@ -1,8 +1,8 @@
 """ Constant """
 class Constant:
     """ Contains constant """
-    f_folder = "IPCamera"
-    wanted_files = ['avi', 'avi_idx']
+    base_folder = "IPCamera"
+    wanted_files_record = ['avi', 'avi_idx']
     wanted_files_snap = ['jpg', 'jpg']
     snap_folder = "snap"
     record_folder = "record"
