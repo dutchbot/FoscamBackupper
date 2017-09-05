@@ -12,6 +12,7 @@ from pyftpdlib.handlers import FTPHandler
 class MockFTPServer:
     """ Mock the foscam ftp folder structure """
     server = None
+    running = False
 
     def start_ftp_server(self, conf):
         authorizer = DummyAuthorizer()
@@ -29,7 +30,11 @@ class MockFTPServer:
         self.mock_dir(conf)
 
         self.server = servers.FTPServer(address, handler)
+        self.running = True
         self.server.serve_forever()
+
+    def is_running(self):
+        return self.running
 
     def mock_dir(self, conf):
         # create IPCamera folder

@@ -1,4 +1,5 @@
 import os
+import time
 import shutil
 import unittest
 from threading import Thread
@@ -36,6 +37,9 @@ class TestWorker(unittest.TestCase):
         TestWorker.thread = Thread(
             target=TestWorker.testserver.start_ftp_server, args=(TestWorker.conf, ))
         TestWorker.thread.start()
+        while not TestWorker.testserver.is_running():
+            print("waiting")
+            time.sleep(0.2)
 
     @staticmethod
     def tearDownClass():

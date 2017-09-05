@@ -111,8 +111,12 @@ class Progress:
             self.done_files += 1
             self.done_progress[folder][filename] = 1
         except KeyError:
-            self.logger.warning("Key error file_done")
-            self.logger.debug(self.done_progress)
+            try:
+                self.done_progress[folder] = {"done": 0, "path": folder}
+                self.done_progress[folder][filename] = 1
+            except KeyError as ex:
+                self.logger.warning("Key error file_done: " + ex.__str__())
+                self.logger.debug(self.done_progress)
 
     def check_folders_done(self):
         """ Check which folders are already complete """
