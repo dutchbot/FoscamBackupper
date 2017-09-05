@@ -86,7 +86,7 @@ class Progress:
         self.logger.debug("Mode " + mode + " " + foldername)
         # check all the files for 1 value
         for folder in self.done_folders:
-            if folder == mode + "/" + foldername:
+            if folder == (mode + "/" + foldername):
                 return True
         return False
 

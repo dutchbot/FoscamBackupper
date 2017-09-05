@@ -36,10 +36,8 @@ class Worker:
         if args["output_path"][-1:] == "":
             self.log_debug("Using current dir")
             self.output_path = ""
-        elif args["output_path"][-1:] == "/":
-            self.output_path = args["output_path"]
         else:
-            self.output_path = args["output_path"] + "/"
+            self.output_path = args['output_path']
         if self.output_path != "" and not os.path.exists(self.output_path):
             os.mkdir(self.output_path)
         self.delete_rm = args["delete_rm"]
@@ -109,20 +107,21 @@ class Worker:
             extra_folder = ""
         if mode == 0:
             self.log_debug("Record folder selected!")
-            connection.sendcmd(helper.select_folder([self.conf.model,Constant.record_folder]) + extra_folder)
+            connection.sendcmd(helper.select_folder([self.conf.model,Constant.record_folder,extra_folder]))
         elif mode == 1:
             self.log_debug("Snap folder selected!")
-            connection.sendcmd(helper.select_folder([self.conf.model,Constant.snap_folder]) + extra_folder)
+            connection.sendcmd(helper.select_folder([self.conf.model,Constant.snap_folder,extra_folder]))
 
     def zip_local_files_folder(self, folder):
         split = folder.split("/")
         output = split[0]
-        if os.path.exists(self.output_path + output):
-            if os.path.exists(self.output_path + folder):
-                os.chdir(self.output_path + folder)
+        
+        if os.path.exists(helper.construct_path(self.output_path,[output])):
+            if os.path.exists(helper.construct_path(self.output_path,[folder])):
+                os.chdir(helper.construct_path(self.output_path,[folder]))
             else:
                 return
-            path_file = self.output_path + folder + '.zip'
+            path_file = helper.construct_path(self.output_path,[folder]) + '.zip'
             if not os.path.isfile(path_file):
                 self.log_info("Creating zip file at: " +
                               path_file)
@@ -156,11 +155,11 @@ class Worker:
                 self.log_info("Recursive strategy")
                 """ Recursive strategy to clean folder """
                 helper.set_remote_folder_fullpath(
-                    connection, fullpath + "/" + folder)
+                    connection, helper.construct_path(fullpath,[folder]))
                 dir_list = connection.mlsd()
                 for dirt, _ in dir_list:
                     helper.set_remote_folder_fullpath(
-                        connection, fullpath + "/" + folder + "/" + dirt)
+                        connection, helper.construct_path(fullpath,[folder,dirt]))
                     file_list = connection.mlsd()
                     for file, desc in file_list:
                         if desc['type'] != "dir":
@@ -168,7 +167,7 @@ class Worker:
                                 connection.delete(file)
                     if dirt != "." and dirt != "..":
                         helper.set_remote_folder_fullpath(
-                            connection, fullpath + "/" + folder)
+                            connection, helper.construct_path(fullpath,[folder]))
                         self.log_debug("Removing subdir: " + dirt)
                         connection.rmd(dirt)
                 self.log_debug("deleting top folder")
@@ -188,7 +187,7 @@ class Worker:
                         continue
                 self.log_debug(pdir)
                 self.set_remote_working_folder(
-                    connection, mode["int_mode"], "/" + pdir)
+                    connection,helper.construct_path(mode["folder"],[pdir]))
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.set_cur_folder(pdir)
                     self.crawl_files(connection.mlsd(),
@@ -245,8 +244,7 @@ class Worker:
                     continue
                 if self.progress.is_max_files_reached() is True:
                     self.progress.save_progress_exit()
-                self.progress.add_file_init(
-                    mode["folder"] + "/" + parent_dir, filename)
+                self.progress.add_file_init(helper.construct_path(mode["folder"],[parent_dir]), filename)
             parent_dir = parent_dir
             self.retrieve_and_write_file(
                 connection, parent_dir, filename, desc, mode["wanted_files"], mode["folder"])
@@ -259,9 +257,9 @@ class Worker:
     def traverse_folder(self, connection, mode, parent_dir, subdir):
         if parent_dir != "":
             self.set_remote_working_folder(
-                connection, mode, "/" + parent_dir + "/" + subdir)
+                connection, mode, helper.construct_path("",[parent_dir,subdir]))
         else:
-            self.set_remote_working_folder(connection, mode, "/" + subdir)
+            self.set_remote_working_folder(connection, mode,helper.construct_path("/",[subdir]))
 
     def retrieve_and_write_file(self, connection, parent_dir, filename, desc, wanted_files, folder):
         if desc['type'] == 'file':
@@ -270,17 +268,14 @@ class Worker:
                 check = filename.split(".")[1]
                 if check == wanted_files[0] or check == wanted_files[1]:
                     wrapper = FileWrapper()
-                    folder = folder + "/" + parent_dir
-                    if not os.path.exists(self.output_path + folder):
-                        os.makedirs(self.output_path + folder)
-                    cur_file = open(self.output_path +
-                                    folder + "/" + filename, "w+b")
+                    folder = helper.construct_path(folder,[parent_dir])
+                    if not os.path.exists(helper.construct_path(self.output_path,[folder])):
+                        os.makedirs(helper.construct_path(self.output_path,[folder]))
+                    cur_file = open(helper.construct_path(self.output_path,[folder,filename]), "w+b")
                     wrapper.set_cur_file(cur_file)
                     try:
                         connection.retrbinary("RETR " + filename, wrapper.write_to_file)
                     except error_perm as e:
-                        print(connection.cwd(""))
-                        print(filename)
                         self.log_debug(filename + e.__str__())
                     wrapper.close_file()
                     self.progress.add_file_done(folder, filename)

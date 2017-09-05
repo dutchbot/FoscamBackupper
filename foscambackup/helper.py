@@ -37,3 +37,14 @@ def get_current_date_time():
 
 def get_current_date_time_rounded():
     return time.strftime("%Y%m%d_%H0000")
+
+def construct_path(start, folders=[], endslash = False):
+    count = 0
+    for folder in folders:
+        if len(folders) != count:
+            start += "/"
+        start += folder 
+        count +=1
+        if len(folders) == count and endslash:
+            start += "/"
+    return start

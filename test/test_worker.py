@@ -9,7 +9,7 @@ from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
-
+import foscambackup.helper as helper
 
 class TestWorker(unittest.TestCase):
     thread = None
@@ -76,6 +76,7 @@ class TestWorker(unittest.TestCase):
             assert False
 
     def test_download_write_file_record(self):
+        print("Writing test case")
         """ Verify that we can retrieve and write a file to a specific directory """
         mode = {"wanted_files": Constant.wanted_files_record,
                 "folder": Constant.record_folder, "int_mode": 0}
@@ -90,9 +91,7 @@ class TestWorker(unittest.TestCase):
             self.connection, mode["int_mode"], parent_dir, sub_dir)
         self.worker.retrieve_and_write_file(
             self.connection, parent_dir, filename, desc, mode["wanted_files"], folder)
-        verify_path = self.args['output_path'] + \
-            folder + "/" + parent_dir + "/" + filename
-        print(verify_path)
+        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir,filename])
         if os.path.exists(verify_path):
             assert True
         else:
@@ -104,7 +103,7 @@ class TestWorker(unittest.TestCase):
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
         self.worker.get_recorded_footage(self.connection)
-        verify_path = self.args['output_path'] + folder + "/" + parent_dir + "/"
+        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir],True)
         if os.path.exists(verify_path):
             count = 0
             for filename in filenames:
@@ -112,7 +111,6 @@ class TestWorker(unittest.TestCase):
                     count +=1
             assert count == len(filenames)
         else:
-            print("wuut")
             assert False
 
     # def test_worker_recorded_footage_download_remote_delete(self):
