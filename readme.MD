@@ -1,3 +1,5 @@
+![GitHub Logo](https://travis-ci.org/dutchbot/FoscamBackupper.svg?branch=development)
+
 This little python project was created for usage with a foscam camera.  
 To list the dirs, copy them to local disk of choice .
 
@@ -18,11 +20,7 @@ username:<username>
 password:<password> 
 model_serial:<model_serial>
 ```
-
-## Note:
-To get the `<model_serial>` folder name connect to the ftp server and look under the `IPCamera` folder.  
-The `<port>` field seems to default to `50021`.
-
+Note that the model_serial can be left as it is, the code will try to retrieve it from the ftp server.
 
 # Roadmap
 1. Add option to store file sizes and compare to disk stored to determine state of file.
@@ -40,4 +38,4 @@ pyinstaller.exe main.py --noconfirm --onefile
 
 # exec test
 
-python -m unittest test\test_connection.py
+`python test\runtests_local.py`
