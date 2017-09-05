@@ -30,12 +30,12 @@ class Progress:
         if os.path.isfile(previous):
             try:
                 cur_file = open(previous, "r")
-                with open(previous) as filename:
-                    tmp = json.load(filename)
+                with open(previous) as foldername:
+                    tmp = json.load(foldername)
                     # don't slice here /n already removed
-                    self.done_progress[tmp['path']] = tmp
+                    self.initialize_done_progress(foldername,tmp)
             finally:
-                filename.close()
+                foldername.close()
                 cur_file.close()
 
     def write_state_file(self):
@@ -47,7 +47,7 @@ class Progress:
                 with open(fname) as filename:
                     content = filename.readlines()
                     for line in content:
-                        self.done_progress[line[:-1]] = {"done": 1, "path": line[:-1]}
+                        self.initialize_done_progress(line[:-1],{"done": 1, "path": line[:-1]})
                         self.done_folders.append(line[:-1])
             finally:
                 filename.close()
@@ -99,24 +99,34 @@ class Progress:
     def add_file_init(self, combined, filename):
         """ Add file to init key """
         try:
-            self.done_progress[combined][filename] = 0
+            if combined != '':
+                self.done_progress[combined][filename] = 0
         except KeyError:
             self.logger.warning("Key error init " + combined)
-            self.done_progress[combined] = {"done": 0, "path": combined}
+            self.initialize_done_progress(combined)
             self.done_progress[combined][filename] = 0
 
     def add_file_done(self, folder, filename):
         """ Add file to done list """
+        print("DONE:" + folder)
         try:
             self.done_files += 1
             self.done_progress[folder][filename] = 1
         except KeyError:
             try:
-                self.done_progress[folder] = {"done": 0, "path": folder}
+                self.initialize_done_progress(folder)
                 self.done_progress[folder][filename] = 1
             except KeyError as ex:
+                print("FOLDER" + folder)
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
+
+    def initialize_done_progress(self,folder, old = None):
+        if folder != '':
+            if old != None:
+                self.done_progress[folder] = old
+            else:
+                self.done_progress[folder] = {"done": 0, "path": folder}
 
     def check_folders_done(self):
         """ Check which folders are already complete """
@@ -136,7 +146,8 @@ class Progress:
                     enc = folder["path"] + "\n"
                     cur_file.write(enc)
                     complete_folders.append(folder["path"])
-                    self.done_progress[folder_name]["done"] = 1
+                    if folder_name != '': # dont know why this could happen
+                        self.done_progress[folder_name]["done"] = 1
                     cur_file.close()
         return complete_folders
 

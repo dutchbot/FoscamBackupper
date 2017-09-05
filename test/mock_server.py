@@ -27,9 +27,6 @@ class MockFTPServer:
         # Instantiate FTP handler class
         handler = FTPHandler
         handler.authorizer = authorizer
-        handler.ignore_log_types
-
-        self.mock_dir(conf)
 
         self.server = servers.FTPServer(address, handler)
         logger = logging.getLogger('pyftpdlib')
@@ -64,7 +61,7 @@ class MockFTPServer:
 
     def generate_mocked_record_file(self, path):
         """ create mocked avi file """
-        file_content = self.get_rand_bytes((1024 * 1024) * 10)  # 10 MB file
+        file_content = self.get_rand_bytes((1024) * 200)  # 200KB file
         fname = helper.get_current_date_time() + ".avi"
         fname = path + fname
         if not os.path.isfile(fname):

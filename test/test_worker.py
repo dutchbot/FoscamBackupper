@@ -1,5 +1,7 @@
 import os
+import sys
 import time
+import logging
 import shutil
 import unittest
 from threading import Thread
@@ -12,6 +14,7 @@ from foscambackup.worker import Worker
 import foscambackup.helper as helper
 
 class TestWorker(unittest.TestCase):
+    """ Basically an intergration / system test """
     thread = None
     testserver = None
     args = None
@@ -22,18 +25,23 @@ class TestWorker(unittest.TestCase):
     def setUp(self):
         args = get_args_obj()
         args["output_path"] = TestWorker.output_path
+        TestWorker.testserver.mock_dir(self.conf)
         self.args = args
-        progress = Progress()
-        self.worker = Worker(progress, self.args)
-        self.connection = self.worker.open_connection(self.conf)
+        self.progress = Progress()
 
     def tearDown(self):
         self.worker.close_connection(self.connection)
-        self.cleanup_directories(TestWorker.output_path)
         self.clear_log()
 
     @staticmethod
     def setUpClass():
+        logger = logging.getLogger('Worker')
+        logger.setLevel(logging.DEBUG)
+        channel = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        channel.setFormatter(formatter)
+        logger.addHandler(channel)
         TestWorker.conf = read_conf()
         TestWorker.testserver = mock_server.MockFTPServer()
         TestWorker.thread = Thread(
@@ -47,18 +55,19 @@ class TestWorker(unittest.TestCase):
     def tearDownClass():
         TestWorker.testserver.close()
         TestWorker.testserver.cleanup_directories()
+        cleanup_directories(TestWorker.output_path)
         TestWorker.thread.join()
 
     def test_connection(self):
+        self.init_worker()
         self.assertNotEqual(self.connection.getwelcome(), None)
 
     def test_delete_file(self):
         """ Verify that we can delete a file remotely """
+        self.init_worker()
         created_dir = "test_dir"
-
         count_dir = 0
         dirs = self.connection.mlsd(facts=['type'])
-
         self.connection.mkd(created_dir)
 
         for dirkey, _ in dirs:
@@ -67,11 +76,11 @@ class TestWorker(unittest.TestCase):
                 self.connection.rmd(created_dir)
 
         after_dirs = self.connection.mlsd(facts=['type'])
-
         self.assertGreater(count_dir, len(list(after_dirs)))
 
     def test_retrieve_dir_contents(self):
         """ Note: we want to test a function from worker actually, need lambdas """
+        self.init_worker()
         if len(self.get_list_of_files("record")) > 0 and len(self.get_list_of_files("snap")) > 0:
             assert True
         else:
@@ -79,53 +88,80 @@ class TestWorker(unittest.TestCase):
 
     def test_download_write_file_record(self):
         print("Writing test case")
+        self.init_worker()
         """ Verify that we can retrieve and write a file to a specific directory """
         mode = {"wanted_files": Constant.wanted_files_record,
                 "folder": Constant.record_folder, "int_mode": 0}
         desc = {'type': 'file'}
-        folder = "record"
+        folder = mode['folder']
         sub_dir = self.get_list_of_dirs(folder, True)
         parent_dir = self.get_list_of_dirs(folder)
         filename = self.get_list_of_files(folder)[0][0]
 
         # First set the correct working dir
         self.worker.retrieve_and_write_file(
-            self.connection, parent_dir, filename, desc, mode["wanted_files"], folder)
+            self.connection, parent_dir, filename, desc, mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir,filename])
-        time.sleep(2)
         if os.path.exists(verify_path):
             assert True
         else:
             assert False
 
-    def test_worker_recorded_footage_download_only(self):
+    def test_worker_recorded_footage_download(self):
         """ Test that we can download recorded footage """
         print("Test downloading record footage code path")
+        self.init_worker()
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
         self.worker.get_recorded_footage(self.connection)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
-        time.sleep(2)
+        self.verify_file_count(verify_path,filenames)
+
+    def test_worker_remote_delete(self):
+        # Important
+        self.args["dry_run"] = False
+        self.args["delete_rm"] = True
+
+        self.worker = Worker(self.progress, self.args)
+        self.connection = self.worker.open_connection(self.conf)
+        mode_folder = 'record'
+        self.get_list_of_dirs(mode_folder)
+        self.get_list_of_files(mode_folder)
+        self.worker.get_recorded_footage(self.connection)
+        done_folders = sorted(self.progress.check_folders_done(), reverse=True)
+        for folder in done_folders:
+            try:
+                fullpath = helper.select_folder([self.conf.model, folder.split("/")[0]])
+                self.worker.delete_remote_folder(self.connection, fullpath, folder.split("/")[1])
+                self.assertEqual(self.check_parent_dir_deleted(mode_folder),True)
+            except:
+                print("Error")
+
+    """ Test helpers """
+
+    def init_worker(self):
+        self.worker = Worker(self.progress, self.args)
+        self.connection = self.worker.open_connection(self.conf)
+
+    def check_parent_dir_deleted(self,folder):
+        return self.get_list_of_dirs(folder) == None
+
+    def verify_file_count(self,verify_path,filenames):
+        """ Assert the file count """
+        print(verify_path)
         if os.path.exists(verify_path):
             count = 0
             for filename in filenames:
-                if os.path.exists(verify_path+"/"+filename[0]):
+                print("LOPPJE")
+                print(verify_path+"/"+filename[0])
+                if os.path.isfile(verify_path+"/"+filename[0]):
                     count +=1
+            print(str(count))
+            print(len(filenames))
             assert count == len(filenames)
         else:
             assert False
-
-    # def test_worker_recorded_footage_download_remote_delete(self):
-    #     """ Test that we can download recorded footage """
-    #     """ To verify correctly we need a list of files """
-    #     self.worker.get_recorded_footage(self.connection)
-    #     if not os.path.exists(self.args['output_path']):
-    #         assert(False)
-    #     else:
-    #         assert(True)
-
-    """ Test helpers """
 
     def get_list_of_dirs(self, mode, subdir=False):
         path = self.conf.model + "/" + mode
@@ -137,6 +173,7 @@ class TestWorker(unittest.TestCase):
                 for subdirname, _ in list_subdirs:
                     return subdirname
             return dirname
+        return None
 
     def get_list_of_files(self, mode):
         path = self.conf.model + "/" + mode
@@ -148,17 +185,17 @@ class TestWorker(unittest.TestCase):
                 list_files = self.connection.mlsd(subpath + "/" + subdir)
                 return list(list_files)
 
-    def cleanup_directories(self, folder):
-        shutil.rmtree(folder, ignore_errors=False, onerror=self.on_error)
-    
     def clear_log(self):
         if os.path.exists(Constant.state_file):
             os.remove(Constant.state_file)
 
-    def on_error(self, func, path, exc_info):
-        print(func)
-        print(path)
-        print(exc_info)
+def cleanup_directories(folder):
+    shutil.rmtree(folder, ignore_errors=False, onerror=on_error)
+
+def on_error(func, path, exc_info):
+    print(func)
+    print(path)
+    print(exc_info)
 
 def get_args_obj():
     """ Mocked args object"""
