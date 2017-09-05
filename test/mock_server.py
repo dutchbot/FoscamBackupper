@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import logging
 import shutil
 from foscambackup import helper
 
@@ -26,10 +27,13 @@ class MockFTPServer:
         # Instantiate FTP handler class
         handler = FTPHandler
         handler.authorizer = authorizer
+        handler.ignore_log_types
 
         self.mock_dir(conf)
 
         self.server = servers.FTPServer(address, handler)
+        logger = logging.getLogger('pyftpdlib')
+        logger.disabled = True # disable
         self.running = True
         self.server.serve_forever()
 

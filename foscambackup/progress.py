@@ -137,6 +137,7 @@ class Progress:
                     cur_file.write(enc)
                     complete_folders.append(folder["path"])
                     self.done_progress[folder_name]["done"] = 1
+                    cur_file.close()
         return complete_folders
 
     def save_progress_exit(self):

@@ -29,6 +29,8 @@ class TestWorker(unittest.TestCase):
 
     def tearDown(self):
         self.worker.close_connection(self.connection)
+        self.cleanup_directories(TestWorker.output_path)
+        self.clear_log()
 
     @staticmethod
     def setUpClass():
@@ -87,11 +89,10 @@ class TestWorker(unittest.TestCase):
         filename = self.get_list_of_files(folder)[0][0]
 
         # First set the correct working dir
-        self.worker.traverse_folder(
-            self.connection, mode["int_mode"], parent_dir, sub_dir)
         self.worker.retrieve_and_write_file(
             self.connection, parent_dir, filename, desc, mode["wanted_files"], folder)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir,filename])
+        time.sleep(2)
         if os.path.exists(verify_path):
             assert True
         else:
@@ -99,15 +100,17 @@ class TestWorker(unittest.TestCase):
 
     def test_worker_recorded_footage_download_only(self):
         """ Test that we can download recorded footage """
+        print("Test downloading record footage code path")
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
         self.worker.get_recorded_footage(self.connection)
-        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir],True)
+        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
+        time.sleep(2)
         if os.path.exists(verify_path):
             count = 0
             for filename in filenames:
-                if os.path.exists(verify_path+filename[0]):
+                if os.path.exists(verify_path+"/"+filename[0]):
                     count +=1
             assert count == len(filenames)
         else:
@@ -147,6 +150,10 @@ class TestWorker(unittest.TestCase):
 
     def cleanup_directories(self, folder):
         shutil.rmtree(folder, ignore_errors=False, onerror=self.on_error)
+    
+    def clear_log(self):
+        if os.path.exists(Constant.state_file):
+            os.remove(Constant.state_file)
 
     def on_error(self, func, path, exc_info):
         print(func)

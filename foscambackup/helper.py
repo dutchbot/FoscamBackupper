@@ -39,6 +39,9 @@ def get_current_date_time_rounded():
     return time.strftime("%Y%m%d_%H0000")
 
 def construct_path(start, folders=[], endslash = False):
+    if type(folders) != type([]):
+        print(type(folders))
+        raise ValueError
     count = 0
     for folder in folders:
         if len(folders) != count:
