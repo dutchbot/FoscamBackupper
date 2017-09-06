@@ -94,6 +94,7 @@ class Worker:
         """ Get the files for both recorded an snapshot footage """
         self.get_recorded_footage(connection)
         self.get_snapshot_footage(connection)
+        self.check_done_folders(connection)
         self.log_info("finished downloading files")
 
     def get_recorded_footage(self, connection):
@@ -145,41 +146,35 @@ class Worker:
 
     def delete_remote_folder(self, connection, fullpath, folder):
         """ Used to delete the remote folder, also deletes recursively """
-        self.log_info("remote delete")
         try:
             if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
                 if not self.dry_run:
                     try:
                         self.log_info("Deleting remote folder..")
-                        helper.set_remote_folder_fullpath(connection, fullpath)
-                        connection.rmd(folder)
+                        self.log_info(fullpath)
+                        connection.rmd(fullpath)
                         self.zipped_folders[folder]['remote_deleted'] = 1
                     except error_perm as perm:
-                        if "No such file or directory" in perm.__str__():
-                            self.logger.error(
-                                "Folder does not exist remotely, perhaps previously deleted?")
-                        elif "550" in perm.__str__():
+                        # if "No such file or directory" in perm.__str__():
+                        #     self.log_error("Fullpath: " + fullpath + ", Folder: " + folder)
+                        #     self.log_error("Current remote dir: " + str(list(connection.mlsd())))
+                        #     self.log_error("Folder does not exist remotely!" + perm.__str__())
+                        if "550" in perm.__str__():
                             self.log_info("Recursive strategy to clean folder")
-                            helper.set_remote_folder_fullpath(
-                                connection, helper.construct_path(fullpath, [folder]))
-                            dir_list = connection.mlsd()
+                            dir_list = connection.mlsd(fullpath)
                             for dirt, _ in dir_list:
-                                helper.set_remote_folder_fullpath(
-                                    connection, helper.construct_path(fullpath, [folder, dirt]))
-                                file_list = connection.mlsd()
-                                for file, desc in file_list:
+                                sub_path = helper.construct_path(fullpath, [dirt])
+                                file_list = connection.mlsd(sub_path)
+                                for filename, desc in file_list:
                                     if desc['type'] != "dir":
-                                        if file != "." and file != "..":
-                                            connection.delete(file)
+                                        if filename != "." and filename != "..":
+                                            file_path = helper.construct_path(sub_path, [filename])
+                                            connection.delete(file_path)
                                 if dirt != "." and dirt != "..":
-                                    helper.set_remote_folder_fullpath(
-                                        connection, helper.construct_path(fullpath, [folder]))
                                     self.log_debug("Removing subdir: " + dirt)
-                                    connection.rmd(dirt)
+                                    connection.rmd(sub_path)
                             self.log_debug("Deleting top folder")
-                            helper.set_remote_folder_fullpath(
-                                connection, fullpath)
-                            connection.rmd(folder)
+                            connection.rmd(fullpath)
                             self.zipped_folders[folder]['remote_deleted'] = 1
                 else:
                     self.log_info("Not deleting remote folder")
@@ -209,7 +204,6 @@ class Worker:
                     self.crawl_files(val, connection, mode, pdir)
                 else:
                     self.log_info("skipping folder")
-                self.check_done_folders(connection)
 
     def check_done_folders(self, connection):
         """ Check which folders are marked as done and process them for deletion and/or zipping """
@@ -218,7 +212,11 @@ class Worker:
         self.log_debug(done_folders)
         self.log_debug("Zip_files " + str(self.zip_files))
         self.log_debug(self.zipped_folders)
+        count = 0
         for folder in done_folders:
+            count+=1
+            self.log_debug(count)
+            self.init_zip_folder(folder)
             self.zip_and_delete(connection, folder)
 
     def zip_and_delete(self, connection, folder):
@@ -239,8 +237,7 @@ class Worker:
 
         if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
             if not self.dry_run:
-                fullpath = helper.select_folder(
-                    [self.conf.model, folder])
+                fullpath = helper.construct_path(self.conf.model, [folder])
                 self.delete_remote_folder(
                     connection, fullpath, folder)
             else:
@@ -260,13 +257,14 @@ class Worker:
                 self.progress.add_file_init(helper.construct_path(
                     mode["folder"], [parent_dir]), filename)
             if desc['type'] == 'dir':
-                if filename != parent_dir:
+                if filename != parent_dir and '_' not in parent_dir: # hacky check
                     path = helper.construct_path(helper.get_abs_path(
                         self.conf, mode), [parent_dir, filename])
                     parent_dir = helper.construct_path(parent_dir, [filename])
                 else:
                     path = helper.construct_path(
                         helper.get_abs_path(self.conf, mode), [parent_dir])
+                self.log_debug("Querying path: " + path)
                 tmp = connection.mlsd(path)
                 self.crawl_files(tmp, connection, mode, parent_dir)
             else:

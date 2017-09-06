@@ -29,7 +29,7 @@ Note that the model_serial can be left as it is, the code will try to retrieve i
 4. Implement CI
 5. Mock / test with ftp server
 6. add test for zipping,
-7. Show download progress ( we probably need to parse file descriptions)
+7. Show download progress (we probably need to parse file descriptions)
 
 # Building for Windows
 ```

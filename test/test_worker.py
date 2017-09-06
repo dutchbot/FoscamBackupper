@@ -121,6 +121,31 @@ class TestWorker(unittest.TestCase):
         self.worker.get_recorded_footage(self.connection)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         self.verify_file_count(verify_path,filenames)
+    
+    def test_worker_snap_footage_download(self):
+        """ Test that we can download snapshot footage """
+        self.init_worker()
+        folder = 'snap'
+        parent_dir = self.get_list_of_dirs(folder)
+        filenames = self.get_list_of_files(folder)
+        self.worker.get_snapshot_footage(self.connection)
+        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
+        self.verify_file_count(verify_path,filenames)
+
+    def test_worker_snapandrecored_footage_download(self):
+        """ Test our main entry point for downloading both types of footage """
+        self.init_worker()
+        folder_snap = 'snap'
+        folder_record = 'record'
+        parent_dir_snap = self.get_list_of_dirs(folder_snap)
+        filenames_snap = self.get_list_of_files(folder_snap)
+        parent_dir_record = self.get_list_of_dirs(folder_record)
+        filenames_record = self.get_list_of_files(folder_record)
+        self.worker.get_files(self.connection)
+        verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
+        verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
+        self.verify_file_count(verify_path_snap,filenames_snap)
+        self.verify_file_count(verify_path_record,filenames_record)
 
     def test_worker_remote_delete(self):
         """ Test remote deletion of folder """
@@ -160,6 +185,24 @@ class TestWorker(unittest.TestCase):
         list_files = zip_file.namelist()
         self.assertListEqual(created_files,list_files)
 
+    def test_worker_snapandrecored_footage_download_delete_zip(self):
+        """ Test our main entry point for downloading both types of footage """
+        self.args["dry_run"] = False
+        self.args["delete_rm"] = True
+        self.args['zip_files'] = True
+        self.init_worker()
+        folder_snap = 'snap'
+        folder_record = 'record'
+        parent_dir_snap = self.get_list_of_dirs(folder_snap)
+        filenames_snap = self.get_list_of_files(folder_snap)
+        parent_dir_record = self.get_list_of_dirs(folder_record)
+        filenames_record = self.get_list_of_files(folder_record)
+        self.worker.get_files(self.connection)
+        verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
+        verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
+        self.verify_file_count(verify_path_snap,filenames_snap)
+        self.verify_file_count(verify_path_record,filenames_record)
+
     """ Test helpers """
 
     def init_worker(self):
@@ -167,7 +210,7 @@ class TestWorker(unittest.TestCase):
         self.connection = self.worker.open_connection(self.conf)
 
     def check_parent_dir_deleted(self,folder):
-        return self.get_list_of_dirs(folder) == None
+        return self.get_list_of_dirs(folder) is None
 
     def verify_file_count(self,verify_path,filenames):
         """ Assert the file count """
