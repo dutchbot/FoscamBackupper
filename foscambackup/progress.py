@@ -9,7 +9,7 @@ from foscambackup.constant import Constant
 
 class Progress:
     """ Track progress """
-    logger = logging.getLogger()
+    logger = logging.getLogger('Worker')
     max_files = -1
     done_files = 1
     done_folders = []
@@ -108,7 +108,7 @@ class Progress:
 
     def add_file_done(self, folder, filename):
         """ Add file to done list """
-        print("DONE:" + folder)
+        self.logger.info("Adding file to DONE " + filename)
         try:
             self.done_files += 1
             self.done_progress[folder][filename] = 1
@@ -117,7 +117,6 @@ class Progress:
                 self.initialize_done_progress(folder)
                 self.done_progress[folder][filename] = 1
             except KeyError as ex:
-                print("FOLDER" + folder)
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
 
@@ -133,12 +132,13 @@ class Progress:
         complete_folders = []
         for folder_name, folder in self.done_progress.items():
             if folder["done"] != 1:
+                self.logger.debug("folder not done yet")
                 number_of_files = len(folder.keys()) - 2
                 actual_done = 0
                 for key, value in folder.items():
                     if key != "done" and key != "path" and value == 1:
                         actual_done += 1
-                self.logger.debug(folder_name)
+                self.logger.debug(folder)
                 self.logger.debug(
                     "Files: " + str(number_of_files) + " Actual: " + str(actual_done))
                 if number_of_files == actual_done:
@@ -149,6 +149,8 @@ class Progress:
                     if folder_name != '': # dont know why this could happen
                         self.done_progress[folder_name]["done"] = 1
                     cur_file.close()
+            else: 
+                complete_folders.append(folder["path"])
         return complete_folders
 
     def save_progress_exit(self):

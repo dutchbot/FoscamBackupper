@@ -43,33 +43,39 @@ class MockFTPServer:
         # create some mocked avi and jpg files
         dir_structure = "IPCamera/" + conf.model + "/record"
         self.create_dir(dir_structure)
-        new_path = self.generate_date_folders(dir_structure)
+        new_path = self.generate_date_folders_remote(dir_structure)
         self.generate_mocked_record_file(new_path + "/")
         dir_structure = "IPCamera/" + conf.model + "/snap"
         self.create_dir(dir_structure)
-        new_path = self.generate_date_folders(dir_structure)
+        new_path = self.generate_date_folders_remote(dir_structure)
         self.generate_mocked_snap_file(new_path + "/")
 
     def get_rand_bytes(self, size):
         return os.urandom(size)
 
-    def generate_date_folders(self, path):
+    def generate_date_folders_local(self, path):
+        new_path = path + "/" + helper.get_current_date()
+        self.create_dir(new_path)
+        return new_path
+    
+    def generate_date_folders_remote(self, path):
         new_path = path + "/" + helper.get_current_date() + "/" + \
             helper.get_current_date_time_rounded()
         self.create_dir(new_path)
         return new_path
 
-    def generate_mocked_record_file(self, path):
+    def generate_mocked_record_file(self, path, offset = 0):
         """ create mocked avi file """
         file_content = self.get_rand_bytes((1024) * 200)  # 200KB file
-        fname = helper.get_current_date_time() + ".avi"
-        fname = path + fname
-        if not os.path.isfile(fname):
+        fname = helper.get_current_date_time_offset(offset) + ".avi"
+        fname_path = path + fname
+        if not os.path.isfile(fname_path):
             try:
-                with open(fname, "wb") as filename:
+                with open(fname_path, "wb") as filename:
                     filename.write(file_content)
             finally:
                 filename.close()
+        return fname
 
     def generate_mocked_snap_file(self, path):
         """ create mocked jpg file """
@@ -87,13 +93,8 @@ class MockFTPServer:
         if not os.path.isdir(name):
             os.makedirs(name)
 
-    def cleanup_directories(self):
-        shutil.rmtree("IPCamera", ignore_errors=False, onerror=self.on_error)
-
-    def on_error(self, func, path, exc_info):
-        print(func)
-        print(path)
-        print(exc_info)
+    def cleanup_remote_directory(self):
+        helper.cleanup_directories("IPCamera")
 
     def close(self):
         self.server.close_all()

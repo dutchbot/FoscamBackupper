@@ -4,6 +4,8 @@ import time
 import logging
 import shutil
 import unittest
+import zipfile
+from ftplib import error_perm
 from threading import Thread
 
 import mock_server
@@ -31,17 +33,19 @@ class TestWorker(unittest.TestCase):
 
     def tearDown(self):
         self.worker.close_connection(self.connection)
+        cleanup_directories(TestWorker.output_path)
         self.clear_log()
 
     @staticmethod
     def setUpClass():
-        logger = logging.getLogger('Worker')
-        logger.setLevel(logging.DEBUG)
-        channel = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        channel.setFormatter(formatter)
-        logger.addHandler(channel)
+        if get_verbosity() == 2:
+            logger = logging.getLogger('Worker')
+            logger.setLevel(logging.DEBUG)
+            channel = logging.StreamHandler(sys.stdout)
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            channel.setFormatter(formatter)
+            logger.addHandler(channel)
         TestWorker.conf = read_conf()
         TestWorker.testserver = mock_server.MockFTPServer()
         TestWorker.thread = Thread(
@@ -54,11 +58,11 @@ class TestWorker(unittest.TestCase):
     @staticmethod
     def tearDownClass():
         TestWorker.testserver.close()
-        TestWorker.testserver.cleanup_directories()
-        cleanup_directories(TestWorker.output_path)
+        TestWorker.testserver.cleanup_remote_directory()
         TestWorker.thread.join()
 
     def test_connection(self):
+        """ Test for welcome message """
         self.init_worker()
         self.assertNotEqual(self.connection.getwelcome(), None)
 
@@ -79,17 +83,17 @@ class TestWorker(unittest.TestCase):
         self.assertGreater(count_dir, len(list(after_dirs)))
 
     def test_retrieve_dir_contents(self):
-        """ Note: we want to test a function from worker actually, need lambdas """
+        """ Get a list of files """
+        #todo replace with functions used in worker
         self.init_worker()
         if len(self.get_list_of_files("record")) > 0 and len(self.get_list_of_files("snap")) > 0:
             assert True
         else:
             assert False
 
-    def test_download_write_file_record(self):
-        print("Writing test case")
-        self.init_worker()
+    def test_download_output_path(self):
         """ Verify that we can retrieve and write a file to a specific directory """
+        self.init_worker()
         mode = {"wanted_files": Constant.wanted_files_record,
                 "folder": Constant.record_folder, "int_mode": 0}
         desc = {'type': 'file'}
@@ -109,7 +113,6 @@ class TestWorker(unittest.TestCase):
 
     def test_worker_recorded_footage_download(self):
         """ Test that we can download recorded footage """
-        print("Test downloading record footage code path")
         self.init_worker()
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
@@ -119,24 +122,42 @@ class TestWorker(unittest.TestCase):
         self.verify_file_count(verify_path,filenames)
 
     def test_worker_remote_delete(self):
+        """ Test remote deletion of folder """
         # Important
         self.args["dry_run"] = False
         self.args["delete_rm"] = True
+        self.worker = Worker(self.progress, self.args)
+        self.connection = self.worker.open_connection(self.conf)
+        mode_folder = 'record'
+        self.worker.get_recorded_footage(self.connection)
+        self.assertRaises(error_perm,self.check_parent_dir_deleted,mode_folder)
+
+    def test_worker_zipfile(self):
+        """ Test zip local file functionality """
+        self.args["dry_run"] = False
+        self.args["zip_files"] = True
 
         self.worker = Worker(self.progress, self.args)
         self.connection = self.worker.open_connection(self.conf)
         mode_folder = 'record'
-        self.get_list_of_dirs(mode_folder)
-        self.get_list_of_files(mode_folder)
-        self.worker.get_recorded_footage(self.connection)
-        done_folders = sorted(self.progress.check_folders_done(), reverse=True)
-        for folder in done_folders:
-            try:
-                fullpath = helper.select_folder([self.conf.model, folder.split("/")[0]])
-                self.worker.delete_remote_folder(self.connection, fullpath, folder.split("/")[1])
-                self.assertEqual(self.check_parent_dir_deleted(mode_folder),True)
-            except:
-                print("Error")
+        dir_structure = helper.construct_path(self.args['output_path'],[mode_folder])
+        TestWorker.testserver.create_dir(dir_structure)
+        new_path = TestWorker.testserver.generate_date_folders_local(dir_structure)
+        created_files = []
+        for i in range(1,3):
+            val = TestWorker.testserver.generate_mocked_record_file(new_path + "/")
+            if created_files.count(val) == 0:
+                created_files.append(val)
+
+        splitted = new_path.split('/')
+        folder = helper.construct_path(mode_folder,[splitted[len(splitted)-1]])
+        self.worker.init_zip_folder(folder)
+        self.worker.zip_local_files_folder(folder)
+        zip_file_path = new_path+".zip"
+        self.assertEqual(os.path.isfile(zip_file_path),True)
+        zip_file = zipfile.ZipFile(zip_file_path)
+        list_files = zip_file.namelist()
+        self.assertListEqual(created_files,list_files)
 
     """ Test helpers """
 
@@ -149,16 +170,11 @@ class TestWorker(unittest.TestCase):
 
     def verify_file_count(self,verify_path,filenames):
         """ Assert the file count """
-        print(verify_path)
         if os.path.exists(verify_path):
             count = 0
             for filename in filenames:
-                print("LOPPJE")
-                print(verify_path+"/"+filename[0])
                 if os.path.isfile(verify_path+"/"+filename[0]):
                     count +=1
-            print(str(count))
-            print(len(filenames))
             assert count == len(filenames)
         else:
             assert False
@@ -188,6 +204,19 @@ class TestWorker(unittest.TestCase):
     def clear_log(self):
         if os.path.exists(Constant.state_file):
             os.remove(Constant.state_file)
+
+        if os.path.exists(Constant.previous_state):
+            os.remove(Constant.previous_state)
+
+def get_verbosity():
+    import inspect
+    """Return current verbosity"""
+    for f in inspect.getouterframes(inspect.currentframe() ):
+        args, _,_, local_dict = inspect.getargvalues(f[0])
+        if len(args) > 5: 
+            first_arg = args[7]
+            first_value = local_dict[first_arg]
+            return first_value
 
 def cleanup_directories(folder):
     shutil.rmtree(folder, ignore_errors=False, onerror=on_error)

@@ -99,34 +99,33 @@ class Worker:
         self.progress.current_mode = Constant.snap_folder
         self.get_footage(connection, mode)
 
+    def init_zip_folder(self,key):
+        self.zipped_folders[key] = { "zipped": 0, "remote_deleted": 0, "local_deleted": 0 }
+
     def zip_local_files_folder(self, folder):
+        """ Arg folder is e.g record/01052017 """
         split = folder.split("/")
         output = split[0]
-
         if os.path.exists(helper.construct_path(self.output_path, [output])):
             if os.path.exists(helper.construct_path(self.output_path, [folder])):
-                os.chdir(helper.construct_path(self.output_path, [folder]))
-            else:
-                return
-            path_file = helper.construct_path(
-                self.output_path, [folder]) + '.zip'
-            if not os.path.isfile(path_file):
-                self.log_info("Creating zip file at: " +
-                              path_file)
-                with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
-                    for filex in os.listdir():
-                        self.log_debug(filex)
-                        myzip.write(filex)
-        os.chdir("../../")
-        self.zipped_folders[folder]['zipped'] = 1
+                path_file = helper.construct_path(
+                    self.output_path, [folder]) + '.zip'
+                if not os.path.isfile(path_file):
+                    self.log_info("Creating zip file at: " +
+                                path_file)
+                    folder_path = helper.construct_path(self.output_path, [folder])
+                    with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
+                        # scandir would provide more info
+                        for filex in os.listdir(path = helper.construct_path(self.output_path, [folder])):
+                            self.log_debug(filex)
+                            myzip.write(helper.construct_path(folder_path,[filex]), arcname=filex)
+                    myzip.close()
+                    self.zipped_folders[folder]['zipped'] = 1
 
-    def on_error(self, func, path, exc_info):
-        self.log_debug("kaass:")
 
     def delete_local_folder(self, path):
         self.log_debug("Deleting local folder..")
-        shutil.rmtree(self.output_path + path,
-                      ignore_errors=False, onerror=self.on_error)
+        helper.cleanup_directories(self.output_path + path)
         self.zipped_folders[path]["local_deleted"] = 1
 
     def delete_remote_folder(self, connection, fullpath, folder):
@@ -170,7 +169,7 @@ class Worker:
                     self.log_info("Not deleting remote folder")
                     self.zipped_folders[folder]['remote_deleted'] = 1
         except KeyError:
-            self.zipped_folders[folder] = { "zipped": 0, "remote_deleted": 0, "local_deleted": 0 }
+            self.init_zip_folder(folder)
             self.delete_remote_folder(connection, fullpath, folder)
 
     def get_abs_path(self, mode):
@@ -209,8 +208,6 @@ class Worker:
         self.log_debug("Zip_files " + str(self.zip_files))
         self.log_debug(self.zipped_folders)
         for folder in done_folders:
-            print("loopy")
-            print("FOLDER : " + folder)
             self.zip_and_delete(connection, folder)
 
     def zip_and_delete(self, connection, folder):
@@ -265,19 +262,19 @@ class Worker:
         wanted_files = mode['wanted_files']
         folder = mode['folder']
         folderpath = self.clean_folder_path(helper.construct_path(folder,[parent_dir]))
-        self.zipped_folders[folderpath] = { "zipped": 0, "remote_deleted": 0, "local_deleted": 0 }
+        self.init_zip_folder(folderpath)
         if desc['type'] == 'file':
             check = filename.split(".")
             if len(check) > 1:
                 check = filename.split(".")[1]
                 if check == wanted_files[0] or check == wanted_files[1]:
                     wrapper = FileWrapper()
-                    folder = helper.construct_path(folder, [parent_dir])
-                    if not os.path.exists(helper.construct_path(self.output_path, [folder])):
+                    if not os.path.exists(helper.construct_path(self.output_path, [folderpath])):
                         os.makedirs(helper.construct_path(
-                            self.output_path, [folder]))
-                    cur_file = open(helper.construct_path(
-                        self.output_path, [folder, filename]), "w+b")
+                            self.output_path, [folderpath]))
+                    local_file_path = helper.construct_path(self.output_path, [folderpath, filename])
+                    cur_file = open(local_file_path, "w+b")
+                    self.log_debug(local_file_path)
                     wrapper.set_cur_file(cur_file)
                     try:
                         file_path = helper.construct_path(self.get_abs_path(mode),[parent_dir,filename])

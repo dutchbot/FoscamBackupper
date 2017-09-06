@@ -1,5 +1,6 @@
 """ Contains helper functions """
 import time
+import shutil
 from foscambackup.constant import Constant
 
 def check_dat_file(filename):
@@ -35,8 +36,30 @@ def get_current_date():
 def get_current_date_time():
     return time.strftime("%Y%m%d_%H%M%S")
 
+def get_current_date_time_offset(offset):
+    if offset != 0:
+        time_str = time.strftime("%Y%m%d_%H%M%S")
+        calc_offset = str(int(time_str[:-2]) + offset)
+        l_timestr = list(time_str)
+        l_timestr[-2] = calc_offset[0]
+        l_timestr[-1] = calc_offset[1]
+        time_str = ''.join(l_timestr)
+        print("TIME" + time_str)
+        return time_str
+    else:
+        return time.strftime("%Y%m%d_%H%M%S")
+
 def get_current_date_time_rounded():
     return time.strftime("%Y%m%d_%H0000")
+
+def cleanup_directories(folder):
+    shutil.rmtree(folder, ignore_errors=False, onerror=on_error)
+
+def on_error(func, path, exc_info):
+    print("Calling error")
+    print(func)
+    print(path)
+    print(exc_info)
 
 def construct_path(start, folders=[], endslash = False):
     if type(folders) != type([]):
