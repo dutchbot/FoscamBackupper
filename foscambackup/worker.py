@@ -20,6 +20,8 @@ class Worker:
     logger = logging.getLogger('Worker')
     progress = None
     conf = None
+    args = None
+    connection = None #
 
     def log_debug(self, msg):
         """ Log debug msg """
@@ -38,9 +40,8 @@ class Worker:
             Note: Hard to test this way, needs rewrite.
         """
         self.progress = progress
-        self.log_debug(isinstance(args.__class__, type(None)))
+        self.args = args
         self.zipped_folders = {}
-        self.zip_files = args["zip_files"]
         if args["output_path"][-1:] == "":
             self.log_debug("Using current dir")
             self.output_path = ""
@@ -48,12 +49,7 @@ class Worker:
             self.output_path = args['output_path']
         if self.output_path != "" and not os.path.exists(self.output_path):
             os.mkdir(self.output_path)
-        self.delete_rm = args["delete_rm"]
-        self.log_debug(args['max_files'])
         self.progress.set_max_files(args["max_files"])
-        self.verbose = args["verbose"]
-        self.dry_run = args["dry_run"]
-        self.delete_local_f = args["delete_local_f"]
 
     def check_currently_recording(self, connection):
         """ Read the Sdrec file, which contains the current recording date """
@@ -87,11 +83,13 @@ class Worker:
         connection.login(conf.username, conf.password)
 
         self.check_currently_recording(connection)
+        self.connection = connection
 
         return connection
 
     def get_files(self, connection):
         """ Get the files for both recorded an snapshot footage """
+        self.connection = connection
         self.get_recorded_footage(connection)
         self.get_snapshot_footage(connection)
         self.check_done_folders(connection)
@@ -138,17 +136,18 @@ class Worker:
                     myzip.close()
                     self.zipped_folders[folder]['zipped'] = 1
 
-    def delete_local_folder(self, path):
+    def delete_local_folder(self, fullpath, folder):
         """ Delete the folder with the downloaded contents, should only be used when zipping is activated. """
         self.log_debug("Deleting local folder..")
-        helper.cleanup_directories(self.output_path + path)
-        self.zipped_folders[path]["local_deleted"] = 1
+        helper.cleanup_directories(fullpath)
+        self.zipped_folders[folder]["local_deleted"] = 1
 
-    def delete_remote_folder(self, connection, fullpath, folder):
+    def delete_remote_folder(self, fullpath, folder):
         """ Used to delete the remote folder, also deletes recursively """
+        connection = self.connection
         try:
-            if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
-                if not self.dry_run:
+            if self.zipped_folders[folder]['remote_deleted'] == 0 and self.args['delete_rm']:
+                if not self.args['dry_run']:
                     try:
                         self.log_info("Deleting remote folder..")
                         self.log_info(fullpath)
@@ -183,7 +182,7 @@ class Worker:
             self.log_error(
                 "Folder key was not initialized in zipped folders list!")
             self.init_zip_folder(folder)
-            self.delete_remote_folder(connection, fullpath, folder)
+            self.delete_remote_folder(fullpath, folder)
 
     def get_footage(self, connection, mode):
         """ Get the footage based on the given mode, do some checks. """
@@ -210,7 +209,6 @@ class Worker:
         self.log_debug("called zip and delete")
         done_folders = sorted(self.progress.check_folders_done(), reverse=True)
         self.log_debug(done_folders)
-        self.log_debug("Zip_files " + str(self.zip_files))
         self.log_debug(self.zipped_folders)
         count = 0
         for folder in done_folders:
@@ -222,27 +220,23 @@ class Worker:
     def zip_and_delete(self, connection, folder):
         """ Function that does multiple checks for zipping and deleting """
         folder = helper.clean_folder_path(folder)
-        if self.zipped_folders[folder]['zipped'] == 0 and self.zip_files:
+        if self.zipped_folders[folder]['zipped'] == 0 and self.args['zip_files']:
             thread = threading.Thread(target=self.zip_local_files_folder,
                                       args=(folder, ))
             thread.start()
             thread.join()
 
-        if self.delete_local_f and self.zipped_folders[folder]["local_deleted"] == 0:
-            if not self.dry_run:
-                self.delete_local_folder(folder)
-            else:
-                self.zipped_folders[folder]["local_deleted"] = 1
-                self.log_info("Deleted local: " + folder)
+        self.check_folder_state_delete("local_deleted","delete_local_f",folder, self.delete_local_folder)
+        self.check_folder_state_delete("remote_deleted","delete_rm",folder, self.delete_remote_folder)
 
-        if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
-            if not self.dry_run:
+    def check_folder_state_delete(self, zip_key, arg_key, folder, callback):
+        if self.zipped_folders[folder][zip_key] == 0 and self.args[arg_key]:
+            if not self.args['dry_run']:
                 fullpath = helper.construct_path(self.conf.model, [folder])
-                self.delete_remote_folder(
-                    connection, fullpath, folder)
+                callback(fullpath, folder)
             else:
-                self.zipped_folders[folder]['remote_deleted'] = 1
-                self.log_debug("Deleted: " + folder)
+                self.zipped_folders[folder][zip_key] = 1
+                self.log_debug("Deleted "+zip_key+": " + folder)
 
     def crawl_files(self, file_list, connection, mode, parent_dir=""):
         """ Find the files to download in their respective directories """

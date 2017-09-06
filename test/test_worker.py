@@ -159,6 +159,24 @@ class TestWorker(unittest.TestCase):
         self.worker.check_done_folders(self.connection)
         self.assertTrue(self.check_parent_dir_deleted(mode_folder))
 
+    def test_worker_local_delete(self):
+        """ Test local deletion of folder """
+        # Important
+        self.args["dry_run"] = False
+        self.args["delete_local_f"] = True
+
+        self.worker = Worker(self.progress, self.args)
+        self.connection = self.worker.open_connection(self.conf) # we must satisfy our teardown for now
+
+        mode_folder = "record"
+        new_path, created_files = generate_downloaded_path(mode_folder, self.args)
+
+        folder = mode_folder+new_path[-9:]
+        self.worker.init_zip_folder(folder)
+        self.worker.delete_local_folder(new_path, folder)
+
+        self.assertFalse(os.path.isdir(new_path))
+
     def test_worker_zipfile(self):
         """ Test zip local file functionality """
         self.args["dry_run"] = False
@@ -166,15 +184,9 @@ class TestWorker(unittest.TestCase):
 
         self.worker = Worker(self.progress, self.args)
         self.connection = self.worker.open_connection(self.conf)
-        mode_folder = 'record'
-        dir_structure = helper.construct_path(self.args['output_path'],[mode_folder])
-        TestWorker.testserver.create_dir(dir_structure)
-        new_path = TestWorker.testserver.generate_date_folders_local(dir_structure)
-        created_files = []
-        for i in range(1,3):
-            val = TestWorker.testserver.generate_mocked_record_file(new_path + "/")
-            if created_files.count(val) == 0:
-                created_files.append(val)
+
+        mode_folder = "record"
+        new_path, created_files = generate_downloaded_path(mode_folder, self.args)
 
         splitted = new_path.split('/')
         folder = helper.construct_path(mode_folder,[splitted[len(splitted)-1]])
@@ -262,6 +274,17 @@ def get_verbosity():
             first_arg = args[7]
             first_value = local_dict[first_arg]
             return first_value
+
+def generate_downloaded_path(mode_folder, args):
+    dir_structure = helper.construct_path(args['output_path'],[mode_folder])
+    TestWorker.testserver.create_dir(dir_structure)
+    new_path = TestWorker.testserver.generate_date_folders_local(dir_structure)
+    created_files = []
+    for i in range(1,3):
+        val = TestWorker.testserver.generate_mocked_record_file(new_path + "/")
+        if created_files.count(val) == 0:
+            created_files.append(val)
+    return (new_path, created_files)
 
 def cleanup_directories(folder):
     shutil.rmtree(folder, ignore_errors=False, onerror=on_error)
