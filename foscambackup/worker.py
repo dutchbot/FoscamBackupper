@@ -257,7 +257,7 @@ class Worker:
                 self.progress.add_file_init(helper.construct_path(
                     mode["folder"], [parent_dir]), filename)
             if desc['type'] == 'dir':
-                if filename != parent_dir and '_' not in parent_dir: # hacky check
+                if filename != parent_dir and '_' not in parent_dir and '_' in filename : # hacky check
                     path = helper.construct_path(helper.get_abs_path(
                         self.conf, mode), [parent_dir, filename])
                     parent_dir = helper.construct_path(parent_dir, [filename])

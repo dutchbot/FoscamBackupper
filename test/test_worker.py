@@ -156,7 +156,8 @@ class TestWorker(unittest.TestCase):
         self.connection = self.worker.open_connection(self.conf)
         mode_folder = 'record'
         self.worker.get_recorded_footage(self.connection)
-        self.assertRaises(error_perm,self.check_parent_dir_deleted,mode_folder)
+        self.worker.check_done_folders(self.connection)
+        self.assertTrue(self.check_parent_dir_deleted(mode_folder))
 
     def test_worker_zipfile(self):
         """ Test zip local file functionality """

@@ -49,7 +49,6 @@ def main():
         worker.get_files(con)
     except KeyboardInterrupt:
         logger.info("Program stopped by user, bye :)")
-        progress.save_progress_exit()
     except socket.timeout as stime:
         logger.warning("Failed to connect to ftp server")
         logger.debug(stime.__str__())
