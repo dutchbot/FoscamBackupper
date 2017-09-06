@@ -104,7 +104,7 @@ class TestWorker(unittest.TestCase):
 
         # First set the correct working dir
         self.worker.retrieve_and_write_file(
-            self.connection, parent_dir, filename, desc, mode)
+            self.connection, parent_dir+"/"+sub_dir, filename, desc, mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir,filename])
         if os.path.exists(verify_path):
             assert True

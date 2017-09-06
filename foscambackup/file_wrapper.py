@@ -1,8 +1,8 @@
 class FileWrapper:
     cur_file = None
 
-    def set_cur_file(self,file):
-        self.cur_file = file
+    def __init__(self, local_file_path):
+        self.cur_file = open(local_file_path, "w+b")
 
     def write_to_file(self,binaries):
         self.cur_file.write(binaries)

@@ -27,6 +27,9 @@ class Worker:
 
     def log_info(self, msg):
         self.logger.info(msg)
+    
+    def log_error(self,msg):
+        self.logger.error(msg)
 
     def __init__(self, progress, args):
         self.progress = progress
@@ -169,6 +172,7 @@ class Worker:
                     self.log_info("Not deleting remote folder")
                     self.zipped_folders[folder]['remote_deleted'] = 1
         except KeyError:
+            self.log_error("Folder key was not initialized in zipped folders list!")
             self.init_zip_folder(folder)
             self.delete_remote_folder(connection, fullpath, folder)
 
@@ -268,21 +272,30 @@ class Worker:
             if len(check) > 1:
                 check = filename.split(".")[1]
                 if check == wanted_files[0] or check == wanted_files[1]:
-                    wrapper = FileWrapper()
                     if not os.path.exists(helper.construct_path(self.output_path, [folderpath])):
                         os.makedirs(helper.construct_path(
                             self.output_path, [folderpath]))
-                    local_file_path = helper.construct_path(self.output_path, [folderpath, filename])
-                    cur_file = open(local_file_path, "w+b")
-                    self.log_debug(local_file_path)
-                    wrapper.set_cur_file(cur_file)
-                    try:
-                        file_path = helper.construct_path(self.get_abs_path(mode),[parent_dir,filename])
-                        connection.retrbinary(
-                            "RETR " + file_path, wrapper.write_to_file)
-                        self.log_info("Downloading... " + filename)
-                    except error_perm as exc:
-                        self.log_debug(file_path)
-                        self.log_debug("Retrieve and write file: " +filename + exc.__str__())
-                    wrapper.close_file()
+                    loc_info = {'mode':mode,'parent_dir':parent_dir,'filename':filename, 'folderpath':folderpath}
+                    self.download_file(connection,loc_info)
                     self.progress.add_file_done(folderpath, filename)
+
+    def download_file(self,connection,loc_info):
+        local_file_path = helper.construct_path(self.output_path, [loc_info['folderpath'], loc_info['filename']])
+        self.log_debug(local_file_path)
+        wrapper = None
+        try:
+            wrapper = FileWrapper(local_file_path)
+            file_path = helper.construct_path(self.get_abs_path(loc_info['mode']),[loc_info['parent_dir'],loc_info['filename']])
+            connection.retrbinary(
+                "RETR " + file_path, wrapper.write_to_file)
+            self.log_info("Downloading... " + loc_info['filename'])
+        except error_perm as exc:
+            path_loc_file = helper.construct_path(self.get_abs_path(loc_info['mode']),[loc_info['parent_dir']])
+            self.log_error("Current remote dir: " + str(list(connection.mlsd())))
+            self.log_error("Tried path: " + path_loc_file)
+            self.log_error("Tried path: " + str(list(connection.mlsd(path_loc_file))))
+            self.log_error(file_path)
+            self.log_error("Retrieve and write file: " + loc_info['filename'] + " " + exc.__str__())
+        finally:
+            if wrapper != None:
+                wrapper.close_file()
