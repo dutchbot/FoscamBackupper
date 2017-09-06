@@ -32,7 +32,7 @@ class TestWorker(unittest.TestCase):
         self.progress = Progress()
 
     def tearDown(self):
-        self.worker.close_connection(self.connection)
+        helper.close_connection(self.connection)
         cleanup_directories(TestWorker.output_path)
         self.clear_log()
 
@@ -103,8 +103,9 @@ class TestWorker(unittest.TestCase):
         filename = self.get_list_of_files(folder)[0][0]
 
         # First set the correct working dir
-        self.worker.retrieve_and_write_file(
-            self.connection, parent_dir+"/"+sub_dir, filename, desc, mode)
+        loc_info = {'mode': mode, 'parent_dir': parent_dir+"/"+sub_dir,
+            'filename': filename, 'desc': desc}
+        self.worker.retrieve_and_write_file(self.connection,loc_info)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir,filename])
         if os.path.exists(verify_path):
             assert True

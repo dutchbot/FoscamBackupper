@@ -10,6 +10,7 @@ from foscambackup.progress import Progress
 from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
 from foscambackup.constant import Constant
+import foscambackup.helper as helper
 
 
 def main():
@@ -54,6 +55,8 @@ def main():
         sys.exit()
     except Exception:
         traceback.print_exc()
+    finally:
+        helper.close_connection(con)
         progress.save_progress_exit()
 
 

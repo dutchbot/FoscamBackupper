@@ -1,7 +1,6 @@
 """ WORKER """
-import logging
 import os
-import shutil
+import logging
 import threading
 
 from ftplib import FTP
@@ -23,15 +22,21 @@ class Worker:
     conf = None
 
     def log_debug(self, msg):
+        """ Log debug msg """
         self.logger.debug(msg)
 
     def log_info(self, msg):
+        """ Log info msg """
         self.logger.info(msg)
-    
-    def log_error(self,msg):
+
+    def log_error(self, msg):
+        """ Log error msg """
         self.logger.error(msg)
 
     def __init__(self, progress, args):
+        """ Set and initialize all the variables for later use.
+            Note: Hard to test this way, needs rewrite.
+        """
         self.progress = progress
         self.log_debug(isinstance(args.__class__, type(None)))
         self.zipped_folders = {}
@@ -57,20 +62,23 @@ class Worker:
         dir_list = connection.mlsd("/")
         for directory, _ in dir_list:
             if directory == ".SdRec":
-                connection.retrbinary(
-                    "RETR " + directory, self.read_sdrec_content)
+                connection.retrbinary(helper.create_retr_command(
+                    directory), self.read_sdrec_content)
                 break
 
     def read_sdrec_content(self, file_handle):
+        """ Read the sdrec file, which indicates the last recording state """
         if helper.get_current_date() == file_handle.decode('ascii').split("_")[0]:
             self.log_info(
                 "Skipping current date, because currently recording.")
             self.conf.currently_recording = True
 
     def update_conf(self, conf):
+        """ Update the conf variable """
         self.conf = conf
 
     def open_connection(self, conf):
+        """ Open FTP connection to server with conf information """
         self.conf = conf
 
         connection = FTP()
@@ -82,28 +90,30 @@ class Worker:
 
         return connection
 
-    def close_connection(self, connection):
-        connection.close()
-
     def get_files(self, connection):
+        """ Get the files for both recorded an snapshot footage """
         self.get_recorded_footage(connection)
         self.get_snapshot_footage(connection)
         self.log_info("finished downloading files")
 
     def get_recorded_footage(self, connection):
+        """ Get the recorded (avi) footage """
         mode = {"wanted_files": Constant.wanted_files_record,
                 "folder": Constant.record_folder, "int_mode": 0}
         self.progress.current_mode = Constant.record_folder
         self.get_footage(connection, mode)
 
     def get_snapshot_footage(self, connection):
+        """ Get the snapshot (jpeg) footage """
         mode = {"wanted_files": Constant.wanted_files_snap,
                 "folder": Constant.snap_folder, "int_mode": 1}
         self.progress.current_mode = Constant.snap_folder
         self.get_footage(connection, mode)
 
-    def init_zip_folder(self,key):
-        self.zipped_folders[key] = { "zipped": 0, "remote_deleted": 0, "local_deleted": 0 }
+    def init_zip_folder(self, key):
+        """ Initialize the key for folder with dict object """
+        self.zipped_folders[key] = {"zipped": 0,
+                                    "remote_deleted": 0, "local_deleted": 0}
 
     def zip_local_files_folder(self, folder):
         """ Arg folder is e.g record/01052017 """
@@ -115,24 +125,27 @@ class Worker:
                     self.output_path, [folder]) + '.zip'
                 if not os.path.isfile(path_file):
                     self.log_info("Creating zip file at: " +
-                                path_file)
-                    folder_path = helper.construct_path(self.output_path, [folder])
+                                  path_file)
+                    folder_path = helper.construct_path(
+                        self.output_path, [folder])
                     with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
                         # scandir would provide more info
-                        for filex in os.listdir(path = helper.construct_path(self.output_path, [folder])):
+                        for filex in os.listdir(path=helper.construct_path(self.output_path, [folder])):
                             self.log_debug(filex)
-                            myzip.write(helper.construct_path(folder_path,[filex]), arcname=filex)
+                            myzip.write(helper.construct_path(
+                                folder_path, [filex]), arcname=filex)
                     myzip.close()
                     self.zipped_folders[folder]['zipped'] = 1
 
-
     def delete_local_folder(self, path):
+        """ Delete the folder with the downloaded contents, should only be used when zipping is activated. """
         self.log_debug("Deleting local folder..")
         helper.cleanup_directories(self.output_path + path)
         self.zipped_folders[path]["local_deleted"] = 1
 
     def delete_remote_folder(self, connection, fullpath, folder):
-        self.log_info("remote delete")  
+        """ Used to delete the remote folder, also deletes recursively """
+        self.log_info("remote delete")
         try:
             if self.zipped_folders[folder]['remote_deleted'] == 0 and self.delete_rm:
                 if not self.dry_run:
@@ -146,8 +159,7 @@ class Worker:
                             self.logger.error(
                                 "Folder does not exist remotely, perhaps previously deleted?")
                         elif "550" in perm.__str__():
-                            self.log_info("Recursive strategy")
-                            """ Recursive strategy to clean folder """
+                            self.log_info("Recursive strategy to clean folder")
                             helper.set_remote_folder_fullpath(
                                 connection, helper.construct_path(fullpath, [folder]))
                             dir_list = connection.mlsd()
@@ -165,22 +177,22 @@ class Worker:
                                     self.log_debug("Removing subdir: " + dirt)
                                     connection.rmd(dirt)
                             self.log_debug("Deleting top folder")
-                            helper.set_remote_folder_fullpath(connection, fullpath)
+                            helper.set_remote_folder_fullpath(
+                                connection, fullpath)
                             connection.rmd(folder)
                             self.zipped_folders[folder]['remote_deleted'] = 1
                 else:
                     self.log_info("Not deleting remote folder")
                     self.zipped_folders[folder]['remote_deleted'] = 1
         except KeyError:
-            self.log_error("Folder key was not initialized in zipped folders list!")
+            self.log_error(
+                "Folder key was not initialized in zipped folders list!")
             self.init_zip_folder(folder)
             self.delete_remote_folder(connection, fullpath, folder)
 
-    def get_abs_path(self, mode):
-        return helper.construct_path("/"+Constant.base_folder,[self.conf.model,mode["folder"]])
-
     def get_footage(self, connection, mode):
-        tmp = connection.mlsd(self.get_abs_path(mode))
+        """ Get the footage based on the given mode, do some checks. """
+        tmp = connection.mlsd(helper.get_abs_path(self.conf, mode))
         # Snapshot folders are also ordered by time periods
         for pdir, desc in tmp:
             if helper.check_file_type_dir(desc):
@@ -192,20 +204,15 @@ class Worker:
                 self.log_debug(pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.set_cur_folder(pdir)
-                    val = connection.mlsd(path=self.get_abs_path(mode))
+                    val = connection.mlsd(
+                        path=helper.get_abs_path(self.conf, mode))
                     self.crawl_files(val, connection, mode, pdir)
                 else:
                     self.log_info("skipping folder")
-                self.check_done_folders_zip_and_delete(
-                    connection)
+                self.check_done_folders(connection)
 
-    def clean_folder_path(self,folder):
-        """ Remove the rounded date_time to find the correct key """
-        if "_" in folder: #failsafe
-            return folder[:-16] 
-        return folder
-
-    def check_done_folders_zip_and_delete(self, connection):
+    def check_done_folders(self, connection):
+        """ Check which folders are marked as done and process them for deletion and/or zipping """
         self.log_debug("called zip and delete")
         done_folders = sorted(self.progress.check_folders_done(), reverse=True)
         self.log_debug(done_folders)
@@ -215,7 +222,8 @@ class Worker:
             self.zip_and_delete(connection, folder)
 
     def zip_and_delete(self, connection, folder):
-        folder = self.clean_folder_path(folder)
+        """ Function that does multiple checks for zipping and deleting """
+        folder = helper.clean_folder_path(folder)
         if self.zipped_folders[folder]['zipped'] == 0 and self.zip_files:
             thread = threading.Thread(target=self.zip_local_files_folder,
                                       args=(folder, ))
@@ -240,6 +248,7 @@ class Worker:
                 self.log_debug("Deleted: " + folder)
 
     def crawl_files(self, file_list, connection, mode, parent_dir=""):
+        """ Find the files to download in their respective directories """
         for filename, desc in file_list:
             # do not add the time period folders
             if not helper.check_file_type_dir(desc) and helper.check_dat_file(filename) and helper.check_not_curup_dir(filename):
@@ -252,22 +261,30 @@ class Worker:
                     mode["folder"], [parent_dir]), filename)
             if desc['type'] == 'dir':
                 if filename != parent_dir:
-                    path = helper.construct_path(self.get_abs_path(mode),[parent_dir,filename])
-                    parent_dir = helper.construct_path(parent_dir,[filename])
+                    path = helper.construct_path(helper.get_abs_path(
+                        self.conf, mode), [parent_dir, filename])
+                    parent_dir = helper.construct_path(parent_dir, [filename])
                 else:
-                    path = helper.construct_path(self.get_abs_path(mode),[parent_dir])
+                    path = helper.construct_path(
+                        helper.get_abs_path(self.conf, mode), [parent_dir])
                 tmp = connection.mlsd(path)
                 self.crawl_files(tmp, connection, mode, parent_dir)
             else:
+                # location information
+                loc_info = {'mode': mode, 'parent_dir': parent_dir,
+                            'filename': filename, 'desc': desc}
                 self.retrieve_and_write_file(
-                    connection, parent_dir, filename, desc, mode)
+                    connection, loc_info)
 
-    def retrieve_and_write_file(self, connection, parent_dir, filename, desc, mode):
-        wanted_files = mode['wanted_files']
-        folder = mode['folder']
-        folderpath = self.clean_folder_path(helper.construct_path(folder,[parent_dir]))
+    def retrieve_and_write_file(self, connection, loc_info):
+        """ Perform checks and initialization before downloading file """
+        wanted_files = loc_info['mode']['wanted_files']
+        folder = loc_info['mode']['folder']
+        filename = loc_info['filename']
+        folderpath = helper.clean_folder_path(
+            helper.construct_path(folder, [loc_info['parent_dir']]))
         self.init_zip_folder(folderpath)
-        if desc['type'] == 'file':
+        if loc_info['desc']['type'] == 'file':
             check = filename.split(".")
             if len(check) > 1:
                 check = filename.split(".")[1]
@@ -275,27 +292,34 @@ class Worker:
                     if not os.path.exists(helper.construct_path(self.output_path, [folderpath])):
                         os.makedirs(helper.construct_path(
                             self.output_path, [folderpath]))
-                    loc_info = {'mode':mode,'parent_dir':parent_dir,'filename':filename, 'folderpath':folderpath}
-                    self.download_file(connection,loc_info)
+                    loc_info['folderpath'] = folderpath
+                    self.download_file(connection, loc_info)
                     self.progress.add_file_done(folderpath, filename)
 
-    def download_file(self,connection,loc_info):
-        local_file_path = helper.construct_path(self.output_path, [loc_info['folderpath'], loc_info['filename']])
+    def download_file(self, connection, loc_info):
+        """ Download the file with the wrapper object """
+        local_file_path = helper.construct_path(
+            self.output_path, [loc_info['folderpath'], loc_info['filename']])
         self.log_debug(local_file_path)
         wrapper = None
         try:
             wrapper = FileWrapper(local_file_path)
-            file_path = helper.construct_path(self.get_abs_path(loc_info['mode']),[loc_info['parent_dir'],loc_info['filename']])
-            connection.retrbinary(
-                "RETR " + file_path, wrapper.write_to_file)
+            file_path = helper.construct_path(helper.get_abs_path(
+                self.conf, loc_info['mode']), [loc_info['parent_dir'], loc_info['filename']])
+            connection.retrbinary(helper.create_retr_command(
+                file_path), wrapper.write_to_file)
             self.log_info("Downloading... " + loc_info['filename'])
         except error_perm as exc:
-            path_loc_file = helper.construct_path(self.get_abs_path(loc_info['mode']),[loc_info['parent_dir']])
-            self.log_error("Current remote dir: " + str(list(connection.mlsd())))
+            path_loc_file = helper.construct_path(helper.get_abs_path(
+                self.conf, loc_info['mode']), [loc_info['parent_dir']])
+            self.log_error("Current remote dir: " +
+                           str(list(connection.mlsd())))
             self.log_error("Tried path: " + path_loc_file)
-            self.log_error("Tried path: " + str(list(connection.mlsd(path_loc_file))))
+            self.log_error("Tried path: " +
+                           str(list(connection.mlsd(path_loc_file))))
             self.log_error(file_path)
-            self.log_error("Retrieve and write file: " + loc_info['filename'] + " " + exc.__str__())
+            self.log_error("Retrieve and write file: " +
+                           loc_info['filename'] + " " + exc.__str__())
         finally:
             if wrapper != None:
                 wrapper.close_file()

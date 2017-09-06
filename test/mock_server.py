@@ -2,7 +2,6 @@
 
 import os
 import logging
-import shutil
 from foscambackup import helper
 
 from pyftpdlib import servers
@@ -54,11 +53,13 @@ class MockFTPServer:
         return os.urandom(size)
 
     def generate_date_folders_local(self, path):
+        """ Create the date folder structure for local """
         new_path = path + "/" + helper.get_current_date()
         self.create_dir(new_path)
         return new_path
     
     def generate_date_folders_remote(self, path):
+        """ Create the date folders structure for remote """
         new_path = path + "/" + helper.get_current_date() + "/" + \
             helper.get_current_date_time_rounded()
         self.create_dir(new_path)
@@ -94,7 +95,9 @@ class MockFTPServer:
             os.makedirs(name)
 
     def cleanup_remote_directory(self):
+        """ Delete all mocked files """
         helper.cleanup_directories("IPCamera")
 
     def close(self):
+        """ Close all connections so python does not leak """
         self.server.close_all()

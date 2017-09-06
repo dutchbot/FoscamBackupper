@@ -5,7 +5,7 @@ import os.path
 import logging
 
 from foscambackup.constant import Constant
-
+import foscambackup.helper as helper
 
 class Progress:
     """ Track progress """
@@ -14,8 +14,8 @@ class Progress:
     done_files = 1
     done_folders = []
     done_progress = {}
-    cur_mode = None
-    cur_folder = ""
+    cur_mode = None # used for saving progress
+    cur_folder = ""  # used for saving progress
     absolute_dir = ""
 
     def __init__(self):
@@ -31,9 +31,9 @@ class Progress:
             try:
                 cur_file = open(previous, "r")
                 with open(previous) as foldername:
-                    tmp = json.load(foldername)
+                    progress_folder = json.load(foldername)
                     # don't slice here /n already removed
-                    self.initialize_done_progress(foldername,tmp)
+                    self.initialize_done_progress(foldername, progress_folder)
             finally:
                 foldername.close()
                 cur_file.close()
@@ -47,8 +47,9 @@ class Progress:
                 with open(fname) as filename:
                     content = filename.readlines()
                     for line in content:
-                        self.initialize_done_progress(line[:-1],{"done": 1, "path": line[:-1]})
-                        self.done_folders.append(line[:-1])
+                        cleaned = helper.clean_newline_char(line)
+                        self.initialize_done_progress(cleaned, {"done": 1, "path": cleaned})
+                        self.done_folders.append(cleaned)
             finally:
                 filename.close()
                 cur_file.close()
@@ -120,7 +121,8 @@ class Progress:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
 
-    def initialize_done_progress(self,folder, old = None):
+    def initialize_done_progress(self, folder, old=None):
+        """  Initialize key for a folder in our dict structure """
         if folder != '':
             if old != None:
                 self.done_progress[folder] = old
@@ -149,7 +151,7 @@ class Progress:
                     if folder_name != '': # dont know why this could happen
                         self.done_progress[folder_name]["done"] = 1
                     cur_file.close()
-            else: 
+            else:
                 complete_folders.append(folder["path"])
         return complete_folders
 
