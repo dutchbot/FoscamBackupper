@@ -70,7 +70,7 @@ def retrieve_model_serial(connection):
     """ Get the serial number """
     base = "CWD " + "/" + Constant.base_folder
     connection.sendcmd(base)
-    dir_list = connection.mlsd()
+    dir_list = helper.mlsd(connection, "")
     for directory, _ in dir_list:
         if not "." in directory:
             return directory

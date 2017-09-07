@@ -15,6 +15,8 @@ from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 import helper
 
+DELETE_TESTS = True
+
 class TestIntergrationWorker(unittest.TestCase):
     """ Basically an intergration / system test """
     thread = None
@@ -28,6 +30,8 @@ class TestIntergrationWorker(unittest.TestCase):
         args =  helper.get_args_obj()
         args["output_path"] = TestIntergrationWorker.output_path
         helper.mock_dir(self.conf)
+        helper.mock_dir_offset_subdir(self.conf)
+        helper.mock_dir_offset_parentdir(self.conf)
         self.args = args
         self.progress = Progress()
 
@@ -118,6 +122,24 @@ class TestIntergrationWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
     
+    def test_worker_recorded_footage_download_delete_local(self):
+        """ Test that we can delete local folder """
+        self.args["dry_run"] = False
+        self.args['delete_local_f'] = True
+        self.init_worker()
+        folder = 'record'
+        parent_dir = self.get_list_of_dirs(folder)
+        filenames = self.get_list_of_files(folder)
+        self.worker.get_recorded_footage(self.connection)
+        #force it
+        dict_folder ={"path":folder+"/"+parent_dir}
+        self.progress.write_done_folder(dict_folder, dict_folder['path'])
+        self.progress.complete_folders.append(dict_folder['path'])
+
+        self.worker.check_done_folders(self.connection)
+        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
+        helper.verify_file_count(verify_path,filenames)
+
     def test_worker_snap_footage_download(self):
         """ Test that we can download snapshot footage """
         self.init_worker()
@@ -144,34 +166,40 @@ class TestIntergrationWorker(unittest.TestCase):
         helper.verify_file_count(verify_path_record,filenames_record)
 
     def test_worker_remote_delete(self):
-        """ Test remote deletion of folder """
-        # Important
-        self.args["dry_run"] = False
-        self.args["delete_rm"] = True
-        self.worker = Worker(self.progress, self.args)
-        self.connection = self.worker.open_connection(self.conf)
-        mode_folder = 'record'
-        self.worker.get_recorded_footage(self.connection)
-        self.worker.check_done_folders(self.connection)
-        self.assertTrue(self.check_parent_dir_deleted(mode_folder))
+        if DELETE_TESTS:
+            """ Test remote deletion of folder """
+            # Important
+            self.args["dry_run"] = False
+            self.args["delete_rm"] = True
+            self.worker = Worker(self.progress, self.args)
+            self.connection = self.worker.open_connection(self.conf)
+            mode_folder = 'record'
+            self.worker.get_recorded_footage(self.connection)
+            self.worker.check_done_folders(self.connection)
+            self.assertTrue(self.check_parent_dir_deleted(mode_folder))
+        else:
+            pass
 
     def test_worker_snapandrecorded_footage_download_delete_zip(self):
-        """ Test our main entry point for downloading both types of footage """
-        self.args["dry_run"] = False
-        self.args["delete_rm"] = True
-        self.args['zip_files'] = True
-        self.init_worker()
-        folder_snap = 'snap'
-        folder_record = 'record'
-        parent_dir_snap = self.get_list_of_dirs(folder_snap)
-        filenames_snap = self.get_list_of_files(folder_snap)
-        parent_dir_record = self.get_list_of_dirs(folder_record)
-        filenames_record = self.get_list_of_files(folder_record)
-        self.worker.get_files(self.connection)
-        verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
-        verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
-        helper.verify_file_count(verify_path_snap,filenames_snap)
-        helper.verify_file_count(verify_path_record,filenames_record)
+        if DELETE_TESTS:
+            """ Test our main entry point for downloading both types of footage """
+            self.args["dry_run"] = False
+            self.args["delete_rm"] = True
+            self.args['zip_files'] = True
+            self.init_worker()
+            folder_snap = 'snap'
+            folder_record = 'record'
+            parent_dir_snap = self.get_list_of_dirs(folder_snap)
+            filenames_snap = self.get_list_of_files(folder_snap)
+            parent_dir_record = self.get_list_of_dirs(folder_record)
+            filenames_record = self.get_list_of_files(folder_record)
+            self.worker.get_files(self.connection)
+            verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
+            verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
+            helper.verify_file_count(verify_path_snap,filenames_snap)
+            helper.verify_file_count(verify_path_record,filenames_record)
+        else:
+            pass
 
     """ Test helpers """
 
@@ -196,10 +224,10 @@ class TestIntergrationWorker(unittest.TestCase):
 
     def get_list_of_files(self, mode):
         path = helper.get_abs_path(self.conf, mode)
-        list_dir = self.connection.mlsd(path)
+        list_dir = helper.mlsd(self.connection,path)
         for dirname, _ in list_dir:
             subpath = path + "/" + dirname
             list_subdirs = self.connection.mlsd(subpath)
             for subdir, _ in list_subdirs:
-                list_files = self.connection.mlsd(subpath + "/" + subdir)
+                list_files = helper.mlsd(self.connection, subpath + "/" + subdir)
                 return list(list_files)

@@ -17,12 +17,13 @@ class Progress:
     cur_mode = None # used for saving progress
     cur_folder = ""  # used for saving progress
     absolute_dir = ""
+    complete_folders = []
 
     def __init__(self):
         self.absolute_dir = os.getcwd()
 
         self.write_previous_state_file()
-        self.write_state_file()
+        self.read_state_file()
 
     def write_previous_state_file(self):
         """ Write previous progress to file """
@@ -38,13 +39,12 @@ class Progress:
                 foldername.close()
                 cur_file.close()
 
-    def write_state_file(self):
-        """ Write to state file """
+    def read_state_file(self):
+        """ Read from state file """
         fname = self.absolute_dir + "/" + Constant.state_file
         if os.path.isfile(fname):
             try:
-                cur_file = open(fname, "r")
-                with open(fname) as filename:
+                with open(fname,'r') as filename:
                     content = filename.readlines()
                     for line in content:
                         cleaned = helper.clean_newline_char(line)
@@ -52,14 +52,13 @@ class Progress:
                         self.done_folders.append(cleaned)
             finally:
                 filename.close()
-                cur_file.close()
 
     # getters/setters
     def set_max_files(self, max_files):
         """ setter """
         self.max_files = max_files
 
-    def set_current_mode(self, cur_mode):
+    def set_cur_mode(self, cur_mode):
         """ setter """
         self.cur_mode = cur_mode
 
@@ -122,9 +121,14 @@ class Progress:
             except KeyError as ex:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
+    
+    def check_valid_folderkey(self,folder):
+        if len(folder.split("/")[1]) != 8:
+            raise ValueError("Foldername truncated!")
 
     def initialize_done_progress(self, folder, old=None):
         """  Initialize key for a folder in our dict structure """
+        self.check_valid_folderkey(folder)
         if folder != '':
             if old != None:
                 self.done_progress[folder] = old
@@ -133,7 +137,6 @@ class Progress:
 
     def check_folders_done(self):
         """ Check which folders are already complete """
-        complete_folders = []
         for folder_name, folder in self.done_progress.items():
             if folder["done"] != 1:
                 self.logger.debug("folder not done yet")
@@ -146,16 +149,18 @@ class Progress:
                 self.logger.debug(
                     "Files: " + str(number_of_files) + " Actual: " + str(actual_done))
                 if number_of_files == actual_done:
-                    cur_file = open(self.absolute_dir + "/" + Constant.state_file, "a")
-                    enc = folder["path"] + "\n"
-                    cur_file.write(enc)
-                    complete_folders.append(folder["path"])
-                    if folder_name != '': # dont know why this could happen
-                        self.done_progress[folder_name]["done"] = 1
-                    cur_file.close()
-            else:
-                complete_folders.append(folder["path"])
-        return complete_folders
+                    self.write_done_folder(folder, folder_name)
+                    self.complete_folders.append(folder["path"])
+        return self.complete_folders
+
+    def write_done_folder(self, folder, folder_name):
+        print(self.absolute_dir)
+        cur_file = open(self.absolute_dir + "/" + Constant.state_file, "a")
+        enc = folder["path"] + "\n"
+        cur_file.write(enc)
+        if folder_name != '': # dont know why this could happen
+            self.done_progress[folder_name]["done"] = 1
+        cur_file.close()
 
     def save_progress_exit(self):
         """ Save progress """

@@ -15,6 +15,12 @@ def retrieve_split(split, val):
     """ Split compare to val """
     return split[0] == val
 
+def check_not_curup(foldername):
+    """ Check if the folder is current or one directory up.
+        Note: Not necessary in test mode but real ftp server needs it to prevent recursion
+    """
+    return not '..' in foldername and foldername != '.'
+
 def select_folder(folders=[]):
     """ Set remote folder command """
     base = "CWD " + "/" + Constant.base_folder
@@ -24,8 +30,11 @@ def select_folder(folders=[]):
 
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
-    if "_" in folder: #failsafe
-        return folder[:-16]
+    splitted = folder.split("/")
+    # if "-" in folder: #failsafe
+    #     return folder[:-16]
+    if len(folder.split("/")) == 3:
+        return construct_path(splitted[0],[splitted[1]])
     return folder
 
 def create_retr_command(path):
@@ -53,9 +62,17 @@ def on_error(func, path, exc_info):
     print(path)
     print(exc_info)
 
+def mlsd(con, path):
+    """ Cleans the dot and dotdot folders """
+    file_list = con.mlsd(path)
+    cleaned = [i for i in file_list if check_not_curup(i[0])]
+    return cleaned
+
 def clean_newline_char(line):
     """ Remove /n from line """
-    return line[:-1]
+    if "\n" in line:
+        return line[:-1]
+    return line
 
 def get_abs_path(conf, mode):
     """ Construct the absolute remote path, looks like IPCamera/FXXXXXX_CXXXXXXXXXXX/[mode] """

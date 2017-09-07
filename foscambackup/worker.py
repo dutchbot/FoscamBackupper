@@ -48,12 +48,12 @@ class Worker:
         else:
             self.output_path = args['output_path']
         if self.output_path != "" and not os.path.exists(self.output_path):
-            os.mkdir(self.output_path)
+            os.makedirs(self.output_path)
         self.progress.set_max_files(args["max_files"])
 
     def check_currently_recording(self, connection):
         """ Read the Sdrec file, which contains the current recording date """
-        dir_list = connection.mlsd("/")
+        dir_list = helper.mlsd(connection, "/")
         for directory, _ in dir_list:
             if directory == ".SdRec":
                 connection.retrbinary(helper.create_retr_command(
@@ -136,7 +136,7 @@ class Worker:
 
     def delete_local_folder(self, fullpath, folder):
         """ Delete the folder with the downloaded contents, should only be used when zipping is activated. """
-        self.log_debug("Deleting local folder..")
+        self.log_debug("Deleting local folder.. " + fullpath)
         helper.cleanup_directories(fullpath)
         self.zipped_folders[folder]["local_deleted"] = 1
 
@@ -158,10 +158,10 @@ class Worker:
                         #     self.log_error("Folder does not exist remotely!" + perm.__str__())
                         if "550" in perm.__str__():
                             self.log_info("Recursive strategy to clean folder")
-                            dir_list = connection.mlsd(fullpath)
+                            dir_list = helper.mlsd(connection, fullpath)
                             for dirt, _ in dir_list:
                                 sub_path = helper.construct_path(fullpath, [dirt])
-                                file_list = connection.mlsd(sub_path)
+                                file_list = helper.mlsd(connection, sub_path)
                                 for filename, desc in file_list:
                                     if desc['type'] != "dir":
                                         if filename != "." and filename != "..":
@@ -184,7 +184,7 @@ class Worker:
 
     def get_footage(self, connection, mode):
         """ Get the footage based on the given mode, do some checks. """
-        top_folders = connection.mlsd(helper.get_abs_path(self.conf, mode))
+        top_folders = helper.mlsd(connection, helper.get_abs_path(self.conf, mode))
         # Snapshot folders are also ordered by time periods
         for pdir, desc in top_folders:
             if helper.check_file_type_dir(desc):
@@ -196,8 +196,9 @@ class Worker:
                 self.log_debug(pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.set_cur_folder(pdir)
+                    self.progress.set_cur_mode(mode)
                     path = helper.construct_path(helper.get_abs_path(self.conf, mode), [pdir])
-                    val = connection.mlsd(path)
+                    val = helper.mlsd(connection, path)
                     self.crawl_folder(val, connection, mode, pdir)
                 else:
                     self.log_info("skipping folder")
@@ -224,8 +225,9 @@ class Worker:
             thread.start()
             thread.join()
 
-        fullpath = helper.construct_path(self.conf.model, [folder])
+        fullpath = helper.construct_path(self.output_path, [folder])
         self.check_folder_state_delete("local_deleted","delete_local_f",folder, fullpath, self.delete_local_folder)
+        fullpath = helper.construct_path(self.conf.model, [folder])
         fullpath = helper.construct_path("/"+Constant.base_folder,[fullpath])
         self.check_folder_state_delete("remote_deleted","delete_rm",folder, fullpath, self.delete_remote_folder)
 
@@ -248,9 +250,10 @@ class Worker:
                 self.progress.save_progress_exit()
             if path == "":
                 path = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent,foldername])
-            if desc['type'] == 'dir' and not path == "": # second time this should be false
+            # difference between simulated ftp server and real one is listing of '.' and '..'
+            if desc['type'] == 'dir' and path != "" and helper.check_not_curup(foldername): # second time this should be false
                 self.log_debug("Querying path: " + path)
-                file_list_subdir = connection.mlsd(path)
+                file_list_subdir = helper.mlsd(connection, path)
                 self.crawl_folder(file_list_subdir,connection,mode,parent, path)
             else:
                 abs_path = helper.construct_path(path,[foldername])
@@ -301,7 +304,7 @@ class Worker:
             #                str(list(connection.mlsd("."))))
             self.log_error("Tried path: " + loc_info['abs_path'])
             self.log_error("Tried path: " +
-                           str(list(connection.mlsd(loc_info['abs_path']))))
+                           str(list(helper.mlsd(connection, loc_info['abs_path']))))
             self.log_error(loc_info['abs_path'])
             self.log_error("Retrieve and write file: " +
                            loc_info['filename'] + " " + exc.__str__())
