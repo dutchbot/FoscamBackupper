@@ -76,7 +76,7 @@ class Progress:
     def check_for_previous_progress(self, prefix, folder, filename):
         """ Check previous progress key """
         try:
-            if self.done_progress[prefix + "/" + folder][filename] == 1:
+            if self.done_progress[helper.construct_path(prefix,[folder])][filename] == 1:
                 return True
             return False
         except KeyError:
@@ -100,9 +100,11 @@ class Progress:
     def add_file_init(self, combined, filename):
         """ Add file to init key """
         try:
-            if combined != '':
-                self.done_progress[combined][filename] = 0
+            if combined not in self.done_progress:
+                self.initialize_done_progress(combined)
+            self.done_progress[combined][filename] = 0
         except KeyError:
+            self.logger.debug("Combined: " + combined + " Filename: " + filename)
             self.logger.warning("Key error init " + combined)
             self.initialize_done_progress(combined)
             self.done_progress[combined][filename] = 0

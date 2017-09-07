@@ -53,8 +53,6 @@ class Worker:
 
     def check_currently_recording(self, connection):
         """ Read the Sdrec file, which contains the current recording date """
-        base = helper.select_folder()
-        connection.sendcmd(base)
         dir_list = connection.mlsd("/")
         for directory, _ in dir_list:
             if directory == ".SdRec":
@@ -186,9 +184,9 @@ class Worker:
 
     def get_footage(self, connection, mode):
         """ Get the footage based on the given mode, do some checks. """
-        tmp = connection.mlsd(helper.get_abs_path(self.conf, mode))
+        top_folders = connection.mlsd(helper.get_abs_path(self.conf, mode))
         # Snapshot folders are also ordered by time periods
-        for pdir, desc in tmp:
+        for pdir, desc in top_folders:
             if helper.check_file_type_dir(desc):
                 if self.conf.currently_recording:
                     if helper.get_current_date() == pdir:
@@ -198,9 +196,9 @@ class Worker:
                 self.log_debug(pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.set_cur_folder(pdir)
-                    val = connection.mlsd(
-                        path=helper.get_abs_path(self.conf, mode))
-                    self.crawl_files(val, connection, mode, pdir)
+                    path = helper.construct_path(helper.get_abs_path(self.conf, mode), [pdir])
+                    val = connection.mlsd(path)
+                    self.crawl_folder(val, connection, mode, pdir)
                 else:
                     self.log_info("skipping folder")
 
@@ -226,64 +224,64 @@ class Worker:
             thread.start()
             thread.join()
 
-        self.check_folder_state_delete("local_deleted","delete_local_f",folder, self.delete_local_folder)
-        self.check_folder_state_delete("remote_deleted","delete_rm",folder, self.delete_remote_folder)
+        fullpath = helper.construct_path(self.conf.model, [folder])
+        self.check_folder_state_delete("local_deleted","delete_local_f",folder, fullpath, self.delete_local_folder)
+        fullpath = helper.construct_path("/"+Constant.base_folder,[fullpath])
+        self.check_folder_state_delete("remote_deleted","delete_rm",folder, fullpath, self.delete_remote_folder)
 
-    def check_folder_state_delete(self, zip_key, arg_key, folder, callback):
+    def check_folder_state_delete(self, zip_key, arg_key, folder, fullpath, callback):
         if self.zipped_folders[folder][zip_key] == 0 and self.args[arg_key]:
             if not self.args['dry_run']:
-                fullpath = helper.construct_path(self.conf.model, [folder])
                 callback(fullpath, folder)
             else:
                 self.zipped_folders[folder][zip_key] = 1
                 self.log_debug("Deleted "+zip_key+": " + folder)
 
-    def crawl_files(self, file_list, connection, mode, parent_dir=""):
+    def crawl_folder(self, file_list, connection, mode, parent, path = ""):
         """ Find the files to download in their respective directories """
-        for filename, desc in file_list:
+        for foldername, desc in file_list:
             # do not add the time period folders
-            if not helper.check_file_type_dir(desc) and helper.check_dat_file(filename) and helper.check_not_curup_dir(filename):
-                if self.progress.check_for_previous_progress(mode["folder"], parent_dir, filename):
-                    self.log_debug("skipping: " + filename)
-                    continue
-                if self.progress.is_max_files_reached() is True:
-                    self.progress.save_progress_exit()
-                self.progress.add_file_init(helper.construct_path(
-                    mode["folder"], [parent_dir]), filename)
-            if desc['type'] == 'dir':
-                if filename != parent_dir and '_' not in parent_dir and '_' in filename : # hacky check
-                    path = helper.construct_path(helper.get_abs_path(
-                        self.conf, mode), [parent_dir, filename])
-                    parent_dir = helper.construct_path(parent_dir, [filename])
-                else:
-                    path = helper.construct_path(
-                        helper.get_abs_path(self.conf, mode), [parent_dir])
+            if self.progress.check_for_previous_progress(mode["folder"], parent, foldername):
+                self.log_debug("skipping: " + foldername)
+                continue
+            if self.progress.is_max_files_reached() is True:
+                self.progress.save_progress_exit()
+            if path == "":
+                path = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent,foldername])
+            if desc['type'] == 'dir' and not path == "": # second time this should be false
                 self.log_debug("Querying path: " + path)
-                tmp = connection.mlsd(path)
-                self.crawl_files(tmp, connection, mode, parent_dir)
+                file_list_subdir = connection.mlsd(path)
+                self.crawl_folder(file_list_subdir,connection,mode,parent, path)
             else:
-                # location information
-                loc_info = {'mode': mode, 'parent_dir': parent_dir,
-                            'filename': filename, 'desc': desc}
-                self.retrieve_and_write_file(
-                    connection, loc_info)
+                abs_path = helper.construct_path(path,[foldername])
+                loc_info = {'mode': mode, 'parent_dir': parent, 'abs_path': abs_path,
+                    'filename': foldername, 'desc': desc}
+                self.crawl_files(connection, loc_info)
+
+    def crawl_files(self, connection, loc_info):
+        """ Process the actual files """
+        if helper.check_not_dat_file(loc_info['filename']):
+            self.progress.add_file_init(helper.construct_path(
+            loc_info['mode']["folder"], [loc_info['parent_dir']]), loc_info['filename'])
+            self.retrieve_and_write_file(connection, loc_info)
 
     def retrieve_and_write_file(self, connection, loc_info):
         """ Perform checks and initialization before downloading file """
         wanted_files = loc_info['mode']['wanted_files']
-        folder = loc_info['mode']['folder']
+        m_folder = loc_info['mode']['folder']
         filename = loc_info['filename']
         folderpath = helper.clean_folder_path(
-            helper.construct_path(folder, [loc_info['parent_dir']]))
+            helper.construct_path(m_folder, [loc_info['parent_dir']]))
         self.init_zip_folder(folderpath)
         if loc_info['desc']['type'] == 'file':
             check = filename.split(".")
             if len(check) > 1:
                 check = filename.split(".")[1]
                 if check == wanted_files[0] or check == wanted_files[1]:
-                    if not os.path.exists(helper.construct_path(self.output_path, [folderpath])):
-                        os.makedirs(helper.construct_path(
-                            self.output_path, [folderpath]))
+                    path = helper.construct_path(self.output_path, [folderpath])
+                    if not os.path.exists(path):
+                        self.log_info("create structure" +path)
+                        os.makedirs(path)
                     loc_info['folderpath'] = folderpath
                     self.download_file(connection, loc_info)
                     self.progress.add_file_done(folderpath, filename)
@@ -296,20 +294,15 @@ class Worker:
         wrapper = None
         try:
             wrapper = FileWrapper(local_file_path)
-            file_path = helper.construct_path(helper.get_abs_path(
-                self.conf, loc_info['mode']), [loc_info['parent_dir'], loc_info['filename']])
-            connection.retrbinary(helper.create_retr_command(
-                file_path), wrapper.write_to_file)
+            connection.retrbinary(helper.create_retr_command(loc_info['abs_path']), wrapper.write_to_file)
             self.log_info("Downloading... " + loc_info['filename'])
         except error_perm as exc:
-            path_loc_file = helper.construct_path(helper.get_abs_path(
-                self.conf, loc_info['mode']), [loc_info['parent_dir']])
-            self.log_error("Current remote dir: " +
-                           str(list(connection.mlsd())))
-            self.log_error("Tried path: " + path_loc_file)
+            # #self.log_error("Current remote dir: " +
+            #                str(list(connection.mlsd("."))))
+            self.log_error("Tried path: " + loc_info['abs_path'])
             self.log_error("Tried path: " +
-                           str(list(connection.mlsd(path_loc_file))))
-            self.log_error(file_path)
+                           str(list(connection.mlsd(loc_info['abs_path']))))
+            self.log_error(loc_info['abs_path'])
             self.log_error("Retrieve and write file: " +
                            loc_info['filename'] + " " + exc.__str__())
         finally:
