@@ -4,12 +4,21 @@ import time
 import logging
 from foscambackup.constant import Constant
 from foscambackup.conf import Conf
+import foscambackup.helper as helper
 
 TEST_FILE_DELETION = True
 
+def retrieve_model_serial(connection):
+    """ Get the serial number """
+    return helper.retrieve_model_serial(connection)
+
+def sl():
+    """ return slash in use """
+    return "/"
+
 def get_abs_path(conf, mode):
     """ mode is string here """
-    return construct_path("/" + Constant.base_folder, [conf.model, mode])
+    return construct_path(sl() + Constant.base_folder, [conf.model, mode])
 
 def close_connection(connection):
     """ Close the FTP connection """
@@ -26,11 +35,11 @@ def construct_path(start, folders=[], endslash=False):
     count = 0
     for folder in folders:
         if len(folders) != count:
-            start += "/"
+            start += sl()
         start += folder
         count += 1
         if len(folders) == count and endslash:
-            start += "/"
+            start += sl()
     return start
 
 def get_current_date_time_offset(offset):
@@ -98,14 +107,14 @@ def generate_downloaded_path(mode_folder, args):
     new_path = generate_date_folders_local(dir_structure)
     created_files = []
     for i in range(1,3):
-        val = generate_mocked_record_file(new_path + "/")
+        val = generate_mocked_record_file(new_path + sl())
         if created_files.count(val) == 0:
             created_files.append(val)
     return (new_path, created_files)
 
 def generate_date_folders_local(path):
     """ Create the date folder structure for local """
-    new_path = path + "/" + get_current_date()
+    new_path = path + sl() + get_current_date()
     create_dir(new_path)
     return new_path
 
@@ -124,7 +133,7 @@ def mlsd(con, path):
 
 def generate_date_folders_remote(path, cur_date_call, call):
     """ Create the date folders structure for remote """
-    new_path = path + "/" + cur_date_call() + "/" + call()
+    new_path = path + sl() + cur_date_call() + sl() + call()
     create_dir(new_path)
     return new_path
 
@@ -172,7 +181,7 @@ def verify_file_count(verify_path,filenames):
     if os.path.exists(verify_path):
         count = 0
         for filename in filenames:
-            if os.path.isfile(verify_path+"/"+filename[0]):
+            if os.path.isfile(verify_path+sl()+filename[0]):
                 count +=1
         assert count == len(filenames)
     else:
@@ -209,15 +218,15 @@ def mock_dir(conf):
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded)
-    generate_mocked_record_file(new_path + "/")
+    generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded)
-    generate_mocked_snap_file(new_path + "/")
+    generate_mocked_snap_file(new_path + sl())
 
     # important to discover the recursion error?
-    sdrecpath = Constant.base_folder+"/"+".sdRec"
-    if os.path.isfile(Constant.base_folder+"/"+".sdRec"):
+    sdrecpath = Constant.base_folder+sl()+".sdRec"
+    if os.path.isfile(Constant.base_folder+sl()+".sdRec"):
         with open(sdrecpath,'w') as file:
             file.write(get_current_date())
         file.close()
@@ -226,21 +235,21 @@ def mock_dir_offset_subdir(conf):
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded_offset)
-    generate_mocked_record_file(new_path + "/")
+    generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded_offset)
-    generate_mocked_snap_file(new_path + "/")
+    generate_mocked_snap_file(new_path + sl())
 
 def mock_dir_offset_parentdir(conf):
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, get_current_date_time_rounded)
-    generate_mocked_record_file(new_path + "/")
+    generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, get_current_date_time_rounded)
-    generate_mocked_snap_file(new_path + "/")
+    generate_mocked_snap_file(new_path + sl())
 
 def get_args_obj():
     """ Mocked args object"""
@@ -252,6 +261,7 @@ def get_args_obj():
     args["dry_run"] = True
     args["max_files"] = -1
     args["delete_local_f"] = False
+    args['conf'] = None
     return args
 
 def read_conf():

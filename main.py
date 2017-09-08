@@ -10,8 +10,7 @@ from foscambackup.progress import Progress
 from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
-
+import foscambackup.ftp_helper as ftp_helper
 
 def main():
     """ Main """
@@ -37,44 +36,32 @@ def main():
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         channel.setFormatter(formatter)
         logger.addHandler(channel)
-        worker = Worker(progress, args)
-        conf = parser.read_conf()
-        con = worker.open_connection(conf)
+        args['conf'] = parser.read_conf()
+        con = ftp_helper.open_connection(args['conf'])
+        worker = Worker(con, progress, args)
 
         # Not ideal but we need to connect first to retrieve the model serial
-        if conf.model == "<model_serial>":
-            conf.write_model_to_conf(retrieve_model_serial(con))
-            worker.update_conf(conf)
+        if args['conf'].model == "<model_serial>":
+            args['conf'].write_model_to_conf(helper.retrieve_model_serial(con))
+            worker.update_conf(args['conf'])
 
-        worker.get_files(con)
+        worker.get_files()
     except KeyboardInterrupt:
         logger.info("Program stopped by user, bye :)")
     except socket.timeout as stime:
         logger.warning("Failed to connect to ftp server")
         logger.debug(stime.__str__())
-        sys.exit()
     except socket.error as serr:
         logger.warning("Failed to contact ftp server")
         logger.debug(serr.__str__())
-        sys.exit()
     except Exception:
         traceback.print_exc()
     finally:
         if con != None:
-            helper.close_connection(con)
+            ftp_helper.close_connection(con)
         if progress != None:
-            progress.save_progress_exit()
-
-
-def retrieve_model_serial(connection):
-    """ Get the serial number """
-    base = "CWD " + "/" + Constant.base_folder
-    connection.sendcmd(base)
-    dir_list = helper.mlsd(connection, "")
-    for directory, _ in dir_list:
-        if not "." in directory:
-            return directory
-
+            progress.save_progress()
+        sys.exit()
 
 if __name__ == "__main__":
     main()

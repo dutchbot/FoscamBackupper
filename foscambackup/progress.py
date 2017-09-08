@@ -1,11 +1,10 @@
 """ Track progress of downloading etc """
 import json
-import sys
-import os.path
 import logging
 
 from foscambackup.constant import Constant
 import foscambackup.helper as helper
+import foscambackup.file_helper as file_helper
 
 class Progress:
     """ Track progress """
@@ -19,39 +18,45 @@ class Progress:
     absolute_dir = ""
     complete_folders = []
 
+    # 3 responsibilities
     def __init__(self):
-        self.absolute_dir = os.getcwd()
-
-        self.write_previous_state_file()
+        self.absolute_dir = helper.get_cwd()
+        self.read_previous_state_file()
         self.read_state_file()
 
-    def write_previous_state_file(self):
-        """ Write previous progress to file """
-        previous = self.absolute_dir + "/" + Constant.previous_state
-        if os.path.isfile(previous):
-            try:
-                cur_file = open(previous, "r")
-                with open(previous) as foldername:
-                    progress_folder = json.load(foldername)
-                    # don't slice here /n already removed
-                    self.initialize_done_progress(foldername, progress_folder)
-            finally:
-                foldername.close()
-                cur_file.close()
+    # 3 responsibilities open file, loading json, initialize..
+    # possible fix is wrapping function that takes a function that does something with the file contents
 
+    def load_and_init(self, read_file):
+        """ Read the dict from file and parse with JSON module """
+        progress_folder = json.load(read_file)
+        self.initialize_done_progress(progress_folder['path'], progress_folder)
+
+    def read_previous_state_file(self):
+        """ Read previous progress from file """
+        try:
+            previous = self.absolute_dir + helper.sl() + Constant.previous_state
+            file_helper.open_readonly_file(previous, self.load_and_init)
+        except FileNotFoundError:
+            self.logger.info("No previous unfinished result found.")
+
+    def load_and_init_done_folders(self, read_file):
+        content = read_file.readlines()
+        for line in content:
+            cleaned = helper.clean_newline_char(line)
+            done = self.init_empty(cleaned)
+            done['done'] = 1
+            self.initialize_done_progress(cleaned, done)
+            self.done_folders.append(cleaned)
+        
+    # opens file line cleans it, writes initialize, appends to done_folders
     def read_state_file(self):
         """ Read from state file """
-        fname = self.absolute_dir + "/" + Constant.state_file
-        if os.path.isfile(fname):
-            try:
-                with open(fname,'r') as filename:
-                    content = filename.readlines()
-                    for line in content:
-                        cleaned = helper.clean_newline_char(line)
-                        self.initialize_done_progress(cleaned, {"done": 1, "path": cleaned})
-                        self.done_folders.append(cleaned)
-            finally:
-                filename.close()
+        try:
+            fname = helper.construct_path(self.absolute_dir, [Constant.state_file])
+            file_helper.open_readonly_file(fname, self.load_and_init_done_folders)
+        except FileNotFoundError:
+            self.logger.info("No state file found.")
 
     # getters/setters
     def set_max_files(self, max_files):
@@ -86,14 +91,14 @@ class Progress:
         self.logger.debug("Mode " + mode + " " + foldername)
         # check all the files for 1 value
         for folder in self.done_folders:
-            if folder == (mode + "/" + foldername):
+            if folder == helper.construct_path(mode, [foldername]):
                 return True
         return False
 
     def is_max_files_reached(self):
         """ Check max files """
         if self.max_files != -1:
-            return self.max_files <= self.done_files
+            return self.max_files == self.done_files
         return False
 
     def add_file_init(self, combined, filename):
@@ -122,67 +127,86 @@ class Progress:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
     
-    def check_valid_folderkey(self,folder):
-        if len(folder.split("/")[1]) != 8:
-            raise ValueError("Foldername truncated!")
+    def check_valid_folderkey(self, folder):
+        if folder is None or folder == '':
+            raise ValueError("Foldername empty!")
+        if helper.sl() in folder and len(folder.split(helper.sl())[1]) == 8:
+            return True
+        raise ValueError("Foldername truncated!")
+
+    def init_empty(self, folder):
+        return {"done": 0, "path": folder}
 
     def initialize_done_progress(self, folder, old=None):
         """  Initialize key for a folder in our dict structure """
         self.check_valid_folderkey(folder)
-        if folder != '':
-            if old != None:
-                self.done_progress[folder] = old
-            else:
-                self.done_progress[folder] = {"done": 0, "path": folder}
+        if old != None:
+            self.done_progress[folder] = old
+        else:
+            self.done_progress[folder] = self.init_empty(folder)
+
+    def compare_files_done(self, folder):
+        """ Folder must be a list """
+        # we get a dict with 2 keys that say nothing about the folder
+        number_of_files = len(folder.keys()) - 2 
+        actual_done = 0
+        for key, value in folder.items():
+            if key != "done" and key != "path" and value == 1:
+                actual_done += 1
+        self.logger.debug(folder)
+        self.logger.debug("Files: " + str(number_of_files) + " Actual: " + str(actual_done))
+        return number_of_files == actual_done
 
     def check_folders_done(self):
         """ Check which folders are already complete """
         for folder_name, folder in self.done_progress.items():
             if folder["done"] != 1:
                 self.logger.debug("folder not done yet")
-                number_of_files = len(folder.keys()) - 2
-                actual_done = 0
-                for key, value in folder.items():
-                    if key != "done" and key != "path" and value == 1:
-                        actual_done += 1
-                self.logger.debug(folder)
-                self.logger.debug(
-                    "Files: " + str(number_of_files) + " Actual: " + str(actual_done))
-                if number_of_files == actual_done:
+                if self.compare_files_done(folder):
                     self.write_done_folder(folder, folder_name)
-                    self.complete_folders.append(folder["path"])
         return self.complete_folders
 
+    def write_done_folder_to_newline(self, append_file, args):
+        append_file.write(args["path"] + "\n")
+
     def write_done_folder(self, folder, folder_name):
-        print(self.absolute_dir)
-        cur_file = open(self.absolute_dir + "/" + Constant.state_file, "a")
-        enc = folder["path"] + "\n"
-        cur_file.write(enc)
+        path = helper.construct_path(self.absolute_dir,[Constant.previous_state])
+        args = {'path': folder["path"]}
+        file_helper.open_appendonly_file(path, self.write_done_folder_to_newline, args)
         if folder_name != '': # dont know why this could happen
             self.done_progress[folder_name]["done"] = 1
-        cur_file.close()
+            self.complete_folders.append(folder["path"])
 
-    def save_progress_exit(self):
+    def save_progress(self):
         """ Save progress """
         if self.get_cur_folder() != '':
             self.logger.debug("Saving progress..")
-            self.save_progress_for_unfinished(
-                self.cur_mode + "/" + self.get_cur_folder())
-        sys.exit()
+            mode_folder = helper.construct_path(self.cur_mode['folder'], [self.get_cur_folder()])
+            self.save_progress_for_unfinished(mode_folder)
 
-    # save the progress of the last folder
-    def save_progress_for_unfinished(self, folder):
-        """ Save the progress for unfinished task """
+    def write_progress_folder(self, write_file, args):
+        write_file.write(args['enc'])
+
+    def read_last_file(self, folder):
         try:
             self.logger.debug(self.done_folders)
             for directory in self.done_folders:
                 if directory == folder:
                     return
             last_file = self.done_progress[folder]
-            cur_file = open(self.absolute_dir + Constant.previous_state, "w")
-            enc = json.dumps(last_file)
-            cur_file.write(enc)
+            return last_file
         except KeyError:
             self.logger.warning("Key: " + folder)
             self.logger.warning("Key error in save_progress_for_unfinished")
             self.logger.warning(self.done_progress)
+            return None
+
+    # save the progress of the last folder
+    def save_progress_for_unfinished(self, folder):
+        """ Save the progress for unfinished task """
+        last_file = self.read_last_file(folder)
+        if last_file:
+            enc = json.dumps(last_file)
+            path = helper.construct_path(self.absolute_dir,[Constant.previous_state])
+            args = {'enc':enc}
+            file_helper.open_write_file(path, self.write_progress_folder, args)

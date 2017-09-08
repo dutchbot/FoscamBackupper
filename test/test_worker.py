@@ -6,6 +6,7 @@ from foscambackup.worker import Worker
 from foscambackup.progress import Progress
 from mock_server import MockFTPServer
 import helper
+from mock_connection import Connection
 
 class TestWorker(unittest.TestCase):
     args = None
@@ -18,7 +19,7 @@ class TestWorker(unittest.TestCase):
         helper.mock_dir(self.conf)
         self.args = args
         self.progress = Progress()
-        self.worker = Worker(self.progress, self.args)
+        self.worker = Worker(Connection(), self.progress, self.args)
 
     def tearDown(self):
         helper.clear_log()
@@ -39,7 +40,7 @@ class TestWorker(unittest.TestCase):
         self.args["dry_run"] = False
         self.args["delete_local_f"] = True
 
-        self.worker = Worker(self.progress, self.args)
+        self.worker = Worker(Connection(), self.progress, self.args)
 
         mode_folder = "record"
         new_path, _ = helper.generate_downloaded_path(mode_folder, self.args)

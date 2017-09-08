@@ -39,7 +39,6 @@ class MockFTPServer:
     @staticmethod
     def cleanup_remote_directory():
         """ Delete all mocked files """
-        print("Clean")
         helper.cleanup_directories("IPCamera")
 
     def close(self):

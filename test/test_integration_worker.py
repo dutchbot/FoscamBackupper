@@ -13,12 +13,13 @@ from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
+import foscambackup.ftp_helper as ftp_helper
 import helper
 
 DELETE_TESTS = True
 
-class TestIntergrationWorker(unittest.TestCase):
-    """ Basically an intergration / system test """
+class TestIntegrationWorker(unittest.TestCase):
+    """ Basically an integration / system test """
     thread = None
     testserver = None
     args = None
@@ -28,35 +29,36 @@ class TestIntergrationWorker(unittest.TestCase):
 
     def setUp(self):
         args =  helper.get_args_obj()
-        args["output_path"] = TestIntergrationWorker.output_path
+        args["output_path"] = TestIntegrationWorker.output_path
         helper.mock_dir(self.conf)
         helper.mock_dir_offset_subdir(self.conf)
         helper.mock_dir_offset_parentdir(self.conf)
         self.args = args
+        self.args['conf'] = self.conf
         self.progress = Progress()
 
     def tearDown(self):
-        helper.close_connection(self.connection)
+        ftp_helper.close_connection(self.connection)
         helper.clear_log()
 
     @staticmethod
     def setUpClass():
         helper.log_to_stdout('Worker')
-        TestIntergrationWorker.conf =  helper.read_conf()
-        TestIntergrationWorker.testserver = mock_server.MockFTPServer()
-        TestIntergrationWorker.thread = Thread(
-            target=TestIntergrationWorker.testserver.start_ftp_server, args=(TestIntergrationWorker.conf, ))
-        TestIntergrationWorker.thread.start()
-        while not TestIntergrationWorker.testserver.is_running():
+        TestIntegrationWorker.conf =  helper.read_conf()
+        TestIntegrationWorker.testserver = mock_server.MockFTPServer()
+        TestIntegrationWorker.thread = Thread(
+            target=TestIntegrationWorker.testserver.start_ftp_server, args=(TestIntegrationWorker.conf, ))
+        TestIntegrationWorker.thread.start()
+        while not TestIntegrationWorker.testserver.is_running():
             print("waiting")
             time.sleep(0.2)
 
     @staticmethod
     def tearDownClass():
-        TestIntergrationWorker.testserver.close()
-        TestIntergrationWorker.testserver.cleanup_remote_directory()
-        helper.cleanup_directories(TestIntergrationWorker.output_path)
-        TestIntergrationWorker.thread.join()
+        TestIntegrationWorker.testserver.close()
+        TestIntegrationWorker.testserver.cleanup_remote_directory()
+        helper.cleanup_directories(TestIntegrationWorker.output_path)
+        TestIntegrationWorker.thread.join()
 
     def test_connection(self):
         """ Test for welcome message """
@@ -100,12 +102,12 @@ class TestIntergrationWorker(unittest.TestCase):
         filename = self.get_list_of_files(m_folder)[0][0]
 
         # First set the correct working dir
-        pdir = parent_dir+"/"+sub_dir
+        pdir = parent_dir+helper.sl()+sub_dir
         abs_path = helper.get_abs_path(self.conf, m_folder)
         abs_path = helper.construct_path(abs_path,[pdir,filename])
-        loc_info = {'mode': mode, 'parent_dir': parent_dir+"/"+sub_dir,'abs_path': abs_path,
+        loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir,'abs_path': abs_path,
             'filename': filename, 'desc': desc}
-        self.worker.retrieve_and_write_file(self.connection,loc_info)
+        self.worker.retrieve_and_write_file(loc_info)
         verify_path = helper.construct_path(self.args['output_path'],[m_folder,parent_dir,filename])
         if os.path.exists(verify_path):
             assert True
@@ -118,7 +120,7 @@ class TestIntergrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_recorded_footage(self.connection)
+        self.worker.get_recorded_footage()
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
     
@@ -130,13 +132,13 @@ class TestIntergrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_recorded_footage(self.connection)
+        self.worker.get_recorded_footage()
         #force it
-        dict_folder ={"path":folder+"/"+parent_dir}
+        dict_folder ={"path":folder+helper.sl()+parent_dir}
         self.progress.write_done_folder(dict_folder, dict_folder['path'])
         self.progress.complete_folders.append(dict_folder['path'])
 
-        self.worker.check_done_folders(self.connection)
+        self.worker.check_done_folders()
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
 
@@ -146,7 +148,7 @@ class TestIntergrationWorker(unittest.TestCase):
         folder = 'snap'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_snapshot_footage(self.connection)
+        self.worker.get_snapshot_footage()
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
 
@@ -159,7 +161,7 @@ class TestIntergrationWorker(unittest.TestCase):
         filenames_snap = self.get_list_of_files(folder_snap)
         parent_dir_record = self.get_list_of_dirs(folder_record)
         filenames_record = self.get_list_of_files(folder_record)
-        self.worker.get_files(self.connection)
+        self.worker.get_files()
         verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
         verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
         helper.verify_file_count(verify_path_snap,filenames_snap)
@@ -171,11 +173,11 @@ class TestIntergrationWorker(unittest.TestCase):
             # Important
             self.args["dry_run"] = False
             self.args["delete_rm"] = True
-            self.worker = Worker(self.progress, self.args)
-            self.connection = self.worker.open_connection(self.conf)
+            self.connection = ftp_helper.open_connection(self.conf)
+            self.worker = Worker(self.connection, self.progress, self.args)
             mode_folder = 'record'
-            self.worker.get_recorded_footage(self.connection)
-            self.worker.check_done_folders(self.connection)
+            self.worker.get_recorded_footage()
+            self.worker.check_done_folders()
             self.assertTrue(self.check_parent_dir_deleted(mode_folder))
         else:
             pass
@@ -193,7 +195,7 @@ class TestIntergrationWorker(unittest.TestCase):
             filenames_snap = self.get_list_of_files(folder_snap)
             parent_dir_record = self.get_list_of_dirs(folder_record)
             filenames_record = self.get_list_of_files(folder_record)
-            self.worker.get_files(self.connection)
+            self.worker.get_files()
             verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
             verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
             helper.verify_file_count(verify_path_snap,filenames_snap)
@@ -204,8 +206,11 @@ class TestIntergrationWorker(unittest.TestCase):
     """ Test helpers """
 
     def init_worker(self):
-        self.worker = Worker(self.progress, self.args)
-        self.connection = self.worker.open_connection(self.conf)
+        self.connection = ftp_helper.open_connection(self.conf)
+        self.worker = Worker(self.connection, self.progress, self.args)
+        if self.conf.model == "<model_serial>":
+            self.conf.write_model_to_conf(helper.retrieve_model_serial(self.connection))
+            self.worker.update_conf(conf)
 
     def check_parent_dir_deleted(self,folder):
         return self.get_list_of_dirs(folder) is None
@@ -215,7 +220,7 @@ class TestIntergrationWorker(unittest.TestCase):
         list_dir = self.connection.mlsd(path)
         for dirname, _ in list_dir:
             if subdir:
-                subpath = path + "/" + dirname
+                subpath = path + helper.sl() + dirname
                 list_subdirs = self.connection.mlsd(subpath)
                 for subdirname, _ in list_subdirs:
                     return subdirname
@@ -226,8 +231,8 @@ class TestIntergrationWorker(unittest.TestCase):
         path = helper.get_abs_path(self.conf, mode)
         list_dir = helper.mlsd(self.connection,path)
         for dirname, _ in list_dir:
-            subpath = path + "/" + dirname
+            subpath = path + helper.sl() + dirname
             list_subdirs = self.connection.mlsd(subpath)
             for subdir, _ in list_subdirs:
-                list_files = helper.mlsd(self.connection, subpath + "/" + subdir)
+                list_files = helper.mlsd(self.connection, subpath + helper.sl() + subdir)
                 return list(list_files)

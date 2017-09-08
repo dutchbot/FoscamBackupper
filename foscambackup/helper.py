@@ -1,7 +1,19 @@
 """ Contains helper functions """
+import os
 import time
 import shutil
 from foscambackup.constant import Constant
+
+def sl():
+    """ return slash in use """
+    return "/"
+
+def retrieve_model_serial(connection):
+    """ Get the serial number """
+    dir_list = mlsd(connection, Constant.base_folder)
+    for directory, _ in dir_list:
+        if not "." in directory:
+            return directory
 
 def check_not_dat_file(filename):
     """ check for dat file """
@@ -23,17 +35,17 @@ def check_not_curup(foldername):
 
 def select_folder(folders=[]):
     """ Set remote folder command """
-    base = "CWD " + "/" + Constant.base_folder
+    base = "CWD " + sl() + Constant.base_folder
     for folder in folders:
-        base = base + "/" + folder
+        base = base + sl() + folder
     return base
 
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
-    splitted = folder.split("/")
+    splitted = folder.split(sl())
     # if "-" in folder: #failsafe
     #     return folder[:-16]
-    if len(folder.split("/")) == 3:
+    if len(splitted) == 3:
         return construct_path(splitted[0],[splitted[1]])
     return folder
 
@@ -46,10 +58,6 @@ def create_retr_command(path):
 def set_remote_folder_fullpath(connection, fullpath):
     """ Set remote folder """
     connection.sendcmd(fullpath)
-
-def close_connection(connection):
-    """ Close the FTP connection """
-    connection.close()
 
 def cleanup_directories(folder):
     """ Used to cleanup a tree of folders and files """
@@ -65,8 +73,12 @@ def on_error(func, path, exc_info):
 def mlsd(con, path):
     """ Cleans the dot and dotdot folders """
     file_list = con.mlsd(path)
-    cleaned = [i for i in file_list if check_not_curup(i[0])]
+    print(file_list)
+    cleaned = [print(i) for i in file_list if check_not_curup(i[0])]
     return cleaned
+
+def get_cwd():
+    return os.getcwd()
 
 def clean_newline_char(line):
     """ Remove /n from line """
@@ -76,7 +88,7 @@ def clean_newline_char(line):
 
 def get_abs_path(conf, mode):
     """ Construct the absolute remote path, looks like IPCamera/FXXXXXX_CXXXXXXXXXXX/[mode] """
-    return construct_path("/" + Constant.base_folder, [conf.model, mode["folder"]])
+    return construct_path(sl() + Constant.base_folder, [conf.model, mode["folder"]])
 
 def construct_path(start, folders=[], endslash=False):
     """ Helps to get rid of all the slashes scattered throughout the program
@@ -88,9 +100,9 @@ def construct_path(start, folders=[], endslash=False):
     count = 0
     for folder in folders:
         if len(folders) != count:
-            start += "/"
+            start += sl()
         start += folder
         count += 1
         if len(folders) == count and endslash:
-            start += "/"
+            start += sl()
     return start
