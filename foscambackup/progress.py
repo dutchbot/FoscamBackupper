@@ -10,18 +10,18 @@ class Progress:
     """ Track progress """
     logger = logging.getLogger('Worker')
 
-    def __init__(self):
+    def __init__(self, test=False):
         self.max_files = -1
         self.done_files = 0
         self.done_folders = []
         self.done_progress = {}
-        self.cur_mode = None # used for saving progress
-        self.cur_folder = ""  # used for saving progress
+        self.cur_folder = None
         self.absolute_dir = helper.get_cwd()
         self.complete_folders = []
 
-        self.read_previous_state_file()
-        self.read_state_file()
+        if not test:
+            self.read_previous_state_file()
+            self.read_state_file()
 
     def load_and_init(self, read_file):
         """ Read the dict from file and parse with JSON module """
@@ -168,35 +168,38 @@ class Progress:
         append_file.write(args["path"] + "\n")
 
     def write_done_folder(self, folder, folder_name):
-        path = helper.construct_path(self.absolute_dir,[Constant.previous_state])
+        path = helper.construct_path(self.absolute_dir, [Constant.state_file])
         args = {'path': folder["path"]}
         file_helper.open_appendonly_file(path, self.write_done_folder_to_newline, args)
         if folder_name != '': # dont know why this could happen
             self.done_progress[folder_name]["done"] = 1
             self.complete_folders.append(folder["path"])
 
-    def save_progress(self):
+    def save(self):
         """ Save progress """
-        if self.get_cur_folder() != '':
+        if self.get_cur_folder() != None:
             self.logger.debug("Saving progress..")
-            mode_folder = helper.construct_path(self.cur_mode['folder'], [self.get_cur_folder()])
-            self.save_progress_for_unfinished(mode_folder)
+            mode_folder = self.get_cur_folder()
+            return self.save_progress_for_unfinished(mode_folder)
+        raise ValueError("Missing current folder!")
 
     def write_progress_folder(self, write_file, args):
         write_file.write(args['enc'])
+        print("after write called")
 
     def read_last_file(self, folder):
         try:
             self.logger.debug(self.done_folders)
             for directory in self.done_folders:
                 if directory == folder:
-                    return
+                    self.logger.info("Not saving folder, because already done.")
+                    return None
             last_file = self.done_progress[folder]
             return last_file
         except KeyError:
-            self.logger.warning("Key: " + folder)
-            self.logger.warning("Key error in save_progress_for_unfinished")
-            self.logger.warning(self.done_progress)
+            self.logger.error("Key: " + folder)
+            self.logger.error("Key error in save_progress_for_unfinished")
+            self.logger.error(self.done_progress)
             return None
 
     # save the progress of the last folder
@@ -205,6 +208,8 @@ class Progress:
         last_file = self.read_last_file(folder)
         if last_file:
             enc = json.dumps(last_file)
-            path = helper.construct_path(self.absolute_dir,[Constant.previous_state])
+            path = helper.construct_path(self.absolute_dir, [Constant.previous_state])
             args = {'enc':enc}
             file_helper.open_write_file(path, self.write_progress_folder, args)
+            return True
+        return False

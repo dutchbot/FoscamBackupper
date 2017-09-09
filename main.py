@@ -60,7 +60,7 @@ def main():
         if con != None:
             ftp_helper.close_connection(con)
         if progress != None:
-            progress.save_progress()
+            progress.save()
         sys.exit()
 
 if __name__ == "__main__":

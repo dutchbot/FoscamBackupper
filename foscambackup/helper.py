@@ -8,6 +8,9 @@ def sl():
     """ return slash in use """
     return "/"
 
+def get_current_date():
+    """ This is the format for the date folder where the subfolders and files will be located. """
+    return time.strftime("%Y%m%d")
 
 def check_not_dat_file(filename):
     """ check for dat file """

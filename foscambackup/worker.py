@@ -105,8 +105,7 @@ class Worker:
                         continue
                 self.log_debug(pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
-                    self.progress.set_cur_folder(pdir)
-                    self.progress.set_cur_mode(mode)
+                    self.progress.set_cur_folder(mode["folder"] + helper.sl() + pdir)
                     path = helper.construct_path(helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, pdir)

@@ -7,7 +7,8 @@ def open_readonly_file(path, function):
                 function(read_only_file)
         finally:
             read_only_file.close()
-    raise FileNotFoundError("File or path does not exist!")
+    else:
+        raise FileNotFoundError("File or path does not exist!")
 
 def open_appendonly_file(path, function, args):
     try:
@@ -18,9 +19,13 @@ def open_appendonly_file(path, function, args):
 
 def open_write_file(path, function, args):
     if not os.path.isfile(path):
+        write_file = None
         try:
-            with open(path, "w") as write_file:
-                function(write_file, args)
+            write_file = open(path, "w")
+            function(write_file, args)
+            print("Call me slick!")
         finally:
-            write_file.close()
-    raise FileExistsError("File already exists!")
+            if write_file:
+                write_file.close()
+    else:
+        raise FileExistsError("File already exists!")
