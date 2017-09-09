@@ -140,11 +140,10 @@ class TestIntegrationWorker(unittest.TestCase):
         #force it
         dict_folder ={"path":folder+helper.sl()+parent_dir}
         self.progress.write_done_folder(dict_folder, dict_folder['path'])
-        self.progress.complete_folders.append(dict_folder['path'])
 
         self.worker.check_done_folders()
-        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
-        helper.verify_file_count(verify_path,filenames)
+        verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
+        helper.verify_files_deleted(verify_path, filenames)
 
     #@unittest.SkipTest
     def test_worker_snap_footage_download(self):

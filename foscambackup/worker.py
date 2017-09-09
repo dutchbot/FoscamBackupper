@@ -4,7 +4,6 @@ import sys
 import logging
 import threading
 
-from ftplib import FTP
 from ftplib import error_perm
 from zipfile import ZipFile
 from zipfile import ZIP_LZMA
@@ -41,6 +40,7 @@ class Worker:
         self.args = args
         self.conf = args['conf']
         self.zipped_folders = {}
+        self.progress.max_files = args["max_files"]
         if args["output_path"][-1:] == "":
             self.log_debug("Using current dir")
             self.output_path = ""
@@ -48,14 +48,13 @@ class Worker:
             self.output_path = args['output_path']
         if self.output_path != "" and not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
-        self.progress.set_max_files(args["max_files"])
 
     def check_currently_recording(self):
         """ Read the Sdrec file, which contains the current recording date """
         dir_list = ftp_helper.mlsd(self.connection, helper.sl())
         for directory, _ in dir_list:
-            if directory == ".SdRec":
-                self.connection.retrbinary(helper.create_retr_command(
+            if directory == Constant.sd_rec:
+                self.connection.retrbinary(helper.create_retr(
                     directory), self.read_sdrec_content)
                 break
 
@@ -105,7 +104,7 @@ class Worker:
                         continue
                 self.log_debug(pdir)
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
-                    self.progress.set_cur_folder(mode["folder"] + helper.sl() + pdir)
+                    self.progress.cur_folder = mode["folder"] + helper.sl() + pdir
                     path = helper.construct_path(helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, pdir)
@@ -132,7 +131,7 @@ class Worker:
                         self.output_path, [folder])
                     with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
                         # scandir would provide more info
-                        for filex in os.listdir(path=helper.construct_path(self.output_path, [folder])):
+                        for filex in os.listdir(helper.construct_path(self.output_path, [folder])):
                             self.log_debug(filex)
                             myzip.write(helper.construct_path(
                                 folder_path, [filex]), arcname=filex)
@@ -140,12 +139,15 @@ class Worker:
                     self.zipped_folders[folder]['zipped'] = 1
 
     def delete_local_folder(self, fullpath, folder):
-        """ Delete the folder with the downloaded contents, should only be used when zipping is activated. """
+        """ Delete the folder with the downloaded contents.
+            Should only be used when zipping is activated.
+        """
         self.log_debug("Deleting local folder.. " + fullpath)
         helper.cleanup_directories(fullpath)
         self.zipped_folders[folder]["local_deleted"] = 1
 
     def set_remote_deleted(self, folder):
+        """ Mark folder as deleted """
         self.zipped_folders[folder]['remote_deleted'] = 1
 
     def get_remote_deleted(self, folder):
@@ -246,7 +248,7 @@ class Worker:
             if desc['type'] == 'dir' and path != "" and helper.check_not_curup(foldername): # second time this should be false
                 self.log_debug("Querying path: " + path)
                 file_list_subdir = ftp_helper.mlsd(self.connection, path)
-                self.crawl_folder(file_list_subdir, mode,parent, path)
+                self.crawl_folder(file_list_subdir, mode, parent, path)
             else:
                 abs_path = helper.construct_path(path, [foldername])
                 loc_info = {'mode': mode, 'parent_dir': parent, 'abs_path': abs_path,
@@ -289,7 +291,8 @@ class Worker:
         wrapper = None
         try:
             wrapper = FileWrapper(local_file_path)
-            self.connection.retrbinary(helper.create_retr_command(loc_info['abs_path']), wrapper.write_to_file)
+            call = wrapper.write_to_file
+            ftp_helper.retr(self.connection, helper.create_retr(loc_info['abs_path']), call)
             self.log_info("Downloading... " + loc_info['filename'])
         except error_perm as exc:
             # #self.log_error("Current remote dir: " +

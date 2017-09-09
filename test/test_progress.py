@@ -1,5 +1,4 @@
-
-import builtins
+""" Test all Progress functions """
 import json
 import unittest
 import unittest.mock as mock
@@ -15,8 +14,6 @@ def mocked_append(*args, **kwargs):
     APPEND.buffer += args[0]
 
 def mocked_write(*args, **kwargs):
-    print("why not?")
-    print("args : " + str(args))
     WRITE.buffer += args[0]
 
 READ_STATE = mock.MagicMock(name="open", spec=str)
@@ -37,7 +34,6 @@ WRITE.buffer = str()
 
 
 class TestProgress(unittest.TestCase):
-    # we need 24 TESTS
     
     def setUp(self):
         self.progress = Progress(True)
@@ -70,22 +66,6 @@ class TestProgress(unittest.TestCase):
         """ Tested by test_load_and_init_done_folders """
         pass
 
-    def test_set_max_files(self):
-        self.progress.set_max_files(20)
-        self.assertEqual(self.progress.max_files, 20)
-
-    def test_set_cur_mode(self):
-        self.progress.set_cur_mode("record")
-        self.assertEqual(self.progress.cur_mode, "record")
-
-    def test_set_cur_folder(self):
-        self.progress.set_cur_folder("20160501")
-        self.assertEqual(self.progress.cur_folder, "20160501")
-
-    def test_get_cur_folder(self):
-        self.progress.set_cur_folder("20160501")
-        self.assertEqual(self.progress.get_cur_folder(), "20160501")
-
     def test_check_for_previous_progress(self):
         path = 'record/20160501'
         self.progress.initialize_done_progress(path)
@@ -102,11 +82,11 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.check_done_folder("record", "20160502"), False)
 
     def test_is_max_files_reached(self):
-        self.progress.set_max_files(10)
+        self.progress.max_files = 10
         self.progress.done_files = 10
         self.assertEqual(self.progress.is_max_files_reached(), True)
         # reinit
-        self.progress.set_max_files(-1)
+        self.progress.max_files = -1
         self.assertEqual(self.progress.is_max_files_reached(), False)
         self.progress.done_files = 2
         self.assertEqual(self.progress.is_max_files_reached(), False)
@@ -202,7 +182,7 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_230030.avi'] = 1
         folders[folder]['20160501_150030.avi'] = 0
         self.progress.done_progress = folders
-        self.progress.set_cur_folder(folder)
+        self.progress.cur_folder = folder
         with unittest.mock.patch('builtins.open', APPEND):
             self.assertEqual(self.progress.save(), True)
 
@@ -220,7 +200,7 @@ class TestProgress(unittest.TestCase):
 
         self.assertEqual(WRITE.buffer, args['enc'])
 
-    def test_read_last_file(self):
+    def test_read_processed_folder(self):
         folder = "record/20160501"
         folders = {}
         folders[folder] = self.progress.init_empty(folder)
@@ -228,12 +208,12 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_230030.avi'] = 1
         folders[folder]['20160501_150030.avi'] = 0
         self.progress.done_progress = folders
-        self.assertDictEqual(self.progress.read_last_file(folder), folders[folder])
+        self.assertDictEqual(self.progress.read_last_processed_folder(folder), folders[folder])
         self.progress.done_folders.append(folder)
-        self.assertEqual(self.progress.read_last_file(folder), None)
+        self.assertEqual(self.progress.read_last_processed_folder(folder), None)
         self.progress.done_folders = []
         self.progress.done_progress = {}
-        self.assertEqual(self.progress.read_last_file(folder), None)
+        self.assertEqual(self.progress.read_last_processed_folder(folder), None)
 
     def test_save_progress_for_unfinished(self):
         folder = "record/20160501"

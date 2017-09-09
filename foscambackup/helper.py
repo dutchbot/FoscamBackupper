@@ -43,10 +43,10 @@ def clean_folder_path(folder):
     # if "-" in folder: #failsafe
     #     return folder[:-16]
     if len(splitted) == 3:
-        return construct_path(splitted[0],[splitted[1]])
+        return construct_path(splitted[0], [splitted[1]])
     return folder
 
-def create_retr_command(path):
+def create_retr(path):
     """ Create the RETR command at path """
     if "." in path: # Really basic check for file ext
         return "RETR " + path
@@ -68,6 +68,7 @@ def on_error(func, path, exc_info):
     print(exc_info)
 
 def get_cwd():
+    """ Get the current working directory """
     return os.getcwd()
 
 def clean_newline_char(line):

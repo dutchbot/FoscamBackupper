@@ -1,5 +1,5 @@
+""" Contains functions for ftp interaction """
 from ftplib import FTP
-from ftplib import error_perm
 from foscambackup.constant import Constant
 import foscambackup.helper as helper
 
@@ -30,3 +30,7 @@ def mlsd(con, path):
     if cleaned is None:
         raise ValueError("Empty result")
     return cleaned
+
+def retr(con, abs_path, callback):
+    """ Download binary file """
+    con.retrbinary(abs_path, callback)

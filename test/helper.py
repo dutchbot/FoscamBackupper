@@ -43,7 +43,7 @@ def construct_path(start, folders=[], endslash=False):
     return start
 
 def get_current_date_time_offset(offset):
-    """ For testing purposes TODO move to test helper """
+    """ Get current date with offset """
     if offset != 0:
         time_str = time.strftime("%Y%m%d_%H%M%S")
         calc_offset = str(int(time_str[:-2]) + offset)
@@ -63,6 +63,7 @@ def get_current_date_time_rounded():
     return time.strftime("%Y%m%d-%H0000")
 
 def get_current_date_offset_day():
+    """ Get current date and offset the day """
     offset = 1
     time_str = time.strftime("%Y%m%d")
     int_offset = int(time_str[-2:]) + offset
@@ -92,21 +93,21 @@ def get_current_date_time():
     return time.strftime("%Y%m%d-%H%M%S")
 
 def get_verbosity():
-    import inspect
     """Return current verbosity"""
-    for f in inspect.getouterframes(inspect.currentframe() ):
+    import inspect
+    for f in inspect.getouterframes(inspect.currentframe()):
         args, _,_, local_dict = inspect.getargvalues(f[0])
-        if len(args) > 5: 
+        if len(args) > 5:
             first_arg = args[7]
             first_value = local_dict[first_arg]
             return first_value
 
 def generate_downloaded_path(mode_folder, args):
-    dir_structure = construct_path(args['output_path'],[mode_folder])
+    dir_structure = construct_path(args['output_path'], [mode_folder])
     create_dir(dir_structure)
     new_path = generate_date_folders_local(dir_structure)
     created_files = []
-    for i in range(1,3):
+    for _ in range(1, 3):
         val = generate_mocked_record_file(new_path + sl())
         if created_files.count(val) == 0:
             created_files.append(val)
@@ -130,16 +131,15 @@ def mlsd(con, path):
     cleaned = [i for i in file_list if check_not_curup(i[0])]
     return cleaned
 
-
 def generate_date_folders_remote(path, cur_date_call, call):
     """ Create the date folders structure for remote """
     new_path = path + sl() + cur_date_call() + sl() + call()
     create_dir(new_path)
     return new_path
 
-def generate_mocked_record_file(path, offset = 0):
+def generate_mocked_record_file(path, offset=0):
     """ create mocked avi file """
-    file_content = get_rand_bytes((1024) * 200)  # 200KB file
+    file_content = get_rand_bytes((1024) * 10)  # 10KB file
     fname = get_current_date_time_offset(offset) + ".avi"
     fname_path = path + fname
     if not os.path.isfile(fname_path):
@@ -159,7 +159,7 @@ def on_error(func, path, exc_info):
 
 def generate_mocked_snap_file(path):
     """ create mocked jpg file """
-    file_content = get_rand_bytes((1024) * 90)  # 90 KB file
+    file_content = get_rand_bytes((1024) * 2)  # 2 KB file
     fname = get_current_date_time() + ".jpg"
     fname = path + fname
     if not os.path.isfile(fname):
@@ -170,13 +170,15 @@ def generate_mocked_snap_file(path):
             filename.close()
 
 def get_rand_bytes(size):
+    """ Random bytes """
     return os.urandom(size)
 
 def create_dir(name):
+    """ If dir does note exist, create """
     if not os.path.isdir(name):
         os.makedirs(name)
 
-def verify_file_count(verify_path,filenames):
+def verify_file_count(verify_path, filenames):
     """ Assert the file count """
     if os.path.exists(verify_path):
         count = 0
@@ -186,6 +188,17 @@ def verify_file_count(verify_path,filenames):
         assert count == len(filenames)
     else:
         assert False
+
+def verify_files_deleted(verify_path, filenames):
+    """ Assert the file count """
+    if os.path.exists(verify_path):
+        count = 0
+        for filename in filenames:
+            if os.path.isfile(verify_path+sl()+filename[0]):
+                count += 1
+        assert count == len(filenames)
+    else:
+        assert True
 
 def clear_log():
     if TEST_FILE_DELETION:
@@ -225,9 +238,9 @@ def mock_dir(conf):
     generate_mocked_snap_file(new_path + sl())
 
     # important to discover the recursion error?
-    sdrecpath = Constant.base_folder+sl()+".SdRec"
-    if os.path.isfile(Constant.base_folder+sl()+".SdRec"):
-        with open(sdrecpath,'w') as file:
+    sdrecpath = Constant.base_folder+sl()+Constant.sd_rec
+    if os.path.isfile(Constant.base_folder+sl()+Constant.sd_rec):
+        with open(sdrecpath, 'w') as file:
             file.write(get_current_date())
         file.close()
 
@@ -265,6 +278,7 @@ def get_args_obj():
     return args
 
 def read_conf():
+    """ Read conf and create conf object """
     file_conf = "test.conf"
     conf = Conf()
     with open(file_conf) as file_contents:

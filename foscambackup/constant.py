@@ -9,3 +9,4 @@ class Constant:
     file_t = "settings.conf"
     state_file = "state.log"
     previous_state = "previous_state.json"
+    sd_rec = ".SdRec"

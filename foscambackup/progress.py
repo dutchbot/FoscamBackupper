@@ -45,7 +45,7 @@ class Progress:
             done['done'] = 1
             self.initialize_done_progress(cleaned, done)
             self.done_folders.append(cleaned)
-        
+
     # opens file line cleans it, writes initialize, appends to done_folders
     def read_state_file(self):
         """ Read from state file """
@@ -55,29 +55,10 @@ class Progress:
         except FileNotFoundError:
             self.logger.info("No state file found.")
 
-    # getters/setters
-    def set_max_files(self, max_files):
-        """ setter """
-        self.max_files = max_files
-
-    def set_cur_mode(self, cur_mode):
-        """ setter """
-        self.cur_mode = cur_mode
-
-    def set_cur_folder(self, cur_folder):
-        """ setter """
-        self.cur_folder = cur_folder
-
-    def get_cur_folder(self):
-        """ getter """
-        return self.cur_folder
-
-    # end
-
     def check_for_previous_progress(self, prefix, folder, filename):
         """ Check previous progress key """
         try:
-            if self.done_progress[helper.construct_path(prefix,[folder])][filename] == 1:
+            if self.done_progress[helper.construct_path(prefix, [folder])][filename] == 1:
                 return True
             return False
         except KeyError:
@@ -124,8 +105,9 @@ class Progress:
             except KeyError as ex:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
-    
+
     def check_valid_folderkey(self, folder):
+        """ Verify that key is correct """
         if folder is None or folder == '':
             raise ValueError("Foldername empty!")
         if helper.sl() in folder and len(folder.split(helper.sl())[1]) == 8:
@@ -133,6 +115,7 @@ class Progress:
         raise ValueError("Foldername truncated!")
 
     def init_empty(self, folder):
+        """ Init empty folder """
         return {"done": 0, "path": folder}
 
     def initialize_done_progress(self, folderpath, old=None):
@@ -146,7 +129,7 @@ class Progress:
     def compare_files_done(self, folder):
         """ Folder must be a list """
         # we get a dict with 2 keys that say nothing about the folder
-        number_of_files = len(folder.keys()) - 2 
+        number_of_files = len(folder.keys()) - 2
         actual_done = 0
         for key, value in folder.items():
             if key != "done" and key != "path" and value == 1:
@@ -165,9 +148,11 @@ class Progress:
         return self.complete_folders
 
     def write_done_folder_to_newline(self, append_file, args):
+        """ Write a line to file """
         append_file.write(args["path"] + "\n")
 
     def write_done_folder(self, folder, folder_name):
+        """ Write done folder to state file """
         path = helper.construct_path(self.absolute_dir, [Constant.state_file])
         args = {'path': folder["path"]}
         file_helper.open_appendonly_file(path, self.write_done_folder_to_newline, args)
@@ -177,17 +162,18 @@ class Progress:
 
     def save(self):
         """ Save progress """
-        if self.get_cur_folder() != None:
+        if self.cur_folder != None:
             self.logger.debug("Saving progress..")
-            mode_folder = self.get_cur_folder()
+            mode_folder = self.cur_folder
             return self.save_progress_for_unfinished(mode_folder)
         raise ValueError("Missing current folder!")
 
     def write_progress_folder(self, write_file, args):
+        """ Write json to file """
         write_file.write(args['enc'])
-        print("after write called")
 
-    def read_last_file(self, folder):
+    def read_last_processed_folder(self, folder):
+        """ Read the last processed folder json """
         try:
             self.logger.debug(self.done_folders)
             for directory in self.done_folders:
@@ -205,7 +191,7 @@ class Progress:
     # save the progress of the last folder
     def save_progress_for_unfinished(self, folder):
         """ Save the progress for unfinished task """
-        last_file = self.read_last_file(folder)
+        last_file = self.read_last_processed_folder(folder)
         if last_file:
             enc = json.dumps(last_file)
             path = helper.construct_path(self.absolute_dir, [Constant.previous_state])

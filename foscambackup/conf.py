@@ -12,11 +12,14 @@ class Conf:
     currently_recording = False
 
     def get_model_serial(self, read_file):
+        """ get the model serial from file """
         data = read_file.readlines()
         data[len(data)-1] = 'model_serial:' + self.model
-        file_helper.open_write_file(Constant.file_t, self.write_model_serial, data)
+        file_helper.open_write_file(Constant.file_t, Conf.write_model_serial, data)
 
-    def write_model_serial(self, write_file, args):
+    @staticmethod
+    def write_model_serial(write_file, args):
+        """ Write the data to file """
         write_file.writelines(args['data'])
 
     def write_model_to_conf(self, model):
