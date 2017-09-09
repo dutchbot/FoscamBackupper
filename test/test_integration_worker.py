@@ -50,7 +50,6 @@ class TestIntegrationWorker(unittest.TestCase):
             target=TestIntegrationWorker.testserver.start_ftp_server, args=(TestIntegrationWorker.conf, ))
         TestIntegrationWorker.thread.start()
         while not TestIntegrationWorker.testserver.is_running():
-            print("waiting")
             time.sleep(0.2)
 
     @staticmethod
@@ -59,12 +58,14 @@ class TestIntegrationWorker(unittest.TestCase):
         TestIntegrationWorker.testserver.cleanup_remote_directory()
         helper.cleanup_directories(TestIntegrationWorker.output_path)
         TestIntegrationWorker.thread.join()
-
+    
+    #@unittest.SkipTest
     def test_connection(self):
         """ Test for welcome message """
         self.init_worker()
         self.assertNotEqual(self.connection.getwelcome(), None)
 
+    #@unittest.SkipTest
     def test_delete_file(self):
         """ Verify that we can delete a file remotely """
         self.init_worker()
@@ -81,6 +82,7 @@ class TestIntegrationWorker(unittest.TestCase):
         after_dirs = self.connection.mlsd(facts=['type'])
         self.assertGreater(count_dir, len(list(after_dirs)))
 
+    #@unittest.SkipTest
     def test_retrieve_dir_contents(self):
         """ Get a list of files """
         #todo replace with functions used in worker
@@ -90,6 +92,7 @@ class TestIntegrationWorker(unittest.TestCase):
         else:
             assert False
 
+    #@unittest.SkipTest
     def test_download_output_path(self):
         """ Verify that we can retrieve and write a file to a specific directory """
         self.init_worker()
@@ -114,6 +117,7 @@ class TestIntegrationWorker(unittest.TestCase):
         else:
             assert False
 
+    #@unittest.SkipTest
     def test_worker_recorded_footage_download(self):
         """ Test that we can download recorded footage """
         self.init_worker()
@@ -142,6 +146,7 @@ class TestIntegrationWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
 
+    #@unittest.SkipTest
     def test_worker_snap_footage_download(self):
         """ Test that we can download snapshot footage """
         self.init_worker()
@@ -152,6 +157,7 @@ class TestIntegrationWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
 
+    #@unittest.SkipTest
     def test_worker_snapandrecorded_footage_download(self):
         """ Test our main entry point for downloading both types of footage """
         self.init_worker()
@@ -167,6 +173,7 @@ class TestIntegrationWorker(unittest.TestCase):
         helper.verify_file_count(verify_path_snap,filenames_snap)
         helper.verify_file_count(verify_path_record,filenames_record)
 
+    #@unittest.SkipTest
     def test_worker_remote_delete(self):
         if DELETE_TESTS:
             """ Test remote deletion of folder """
@@ -182,6 +189,7 @@ class TestIntegrationWorker(unittest.TestCase):
         else:
             pass
 
+    #@unittest.SkipTest
     def test_worker_snapandrecorded_footage_download_delete_zip(self):
         if DELETE_TESTS:
             """ Test our main entry point for downloading both types of footage """
@@ -208,9 +216,6 @@ class TestIntegrationWorker(unittest.TestCase):
     def init_worker(self):
         self.connection = ftp_helper.open_connection(self.conf)
         self.worker = Worker(self.connection, self.progress, self.args)
-        if self.conf.model == "<model_serial>":
-            self.conf.write_model_to_conf(helper.retrieve_model_serial(self.connection))
-            self.worker.update_conf(conf)
 
     def check_parent_dir_deleted(self,folder):
         return self.get_list_of_dirs(folder) is None

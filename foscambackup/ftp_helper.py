@@ -1,5 +1,7 @@
 from ftplib import FTP
 from ftplib import error_perm
+from foscambackup.constant import Constant
+import foscambackup.helper as helper
 
 def close_connection(connection):
     """ Close the FTP connection """
@@ -13,3 +15,18 @@ def open_connection(conf):
     connection.login(conf.username, conf.password)
 
     return connection
+
+def retrieve_model_serial(connection):
+    """ Get the serial number """
+    dir_list = mlsd(connection, Constant.base_folder)
+    for directory, _ in dir_list:
+        if not "." in directory:
+            return directory
+
+def mlsd(con, path):
+    """ Cleans the dot and dotdot folders """
+    file_list = con.mlsd(path)
+    cleaned = [i for i in file_list if helper.check_not_curup(i[0])]
+    if cleaned is None:
+        raise ValueError("Empty result")
+    return cleaned

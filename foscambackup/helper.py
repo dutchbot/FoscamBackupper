@@ -8,12 +8,6 @@ def sl():
     """ return slash in use """
     return "/"
 
-def retrieve_model_serial(connection):
-    """ Get the serial number """
-    dir_list = mlsd(connection, Constant.base_folder)
-    for directory, _ in dir_list:
-        if not "." in directory:
-            return directory
 
 def check_not_dat_file(filename):
     """ check for dat file """
@@ -70,13 +64,6 @@ def on_error(func, path, exc_info):
     print(path)
     print(exc_info)
 
-def mlsd(con, path):
-    """ Cleans the dot and dotdot folders """
-    file_list = con.mlsd(path)
-    print(file_list)
-    cleaned = [print(i) for i in file_list if check_not_curup(i[0])]
-    return cleaned
-
 def get_cwd():
     return os.getcwd()
 
@@ -95,8 +82,7 @@ def construct_path(start, folders=[], endslash=False):
         And thus helps migitate possible typo's.
     """
     if not isinstance(folders, type([])):
-        print(type(folders))
-        raise ValueError
+        raise TypeError("Expected list of folders!")
     count = 0
     for folder in folders:
         if len(folders) != count:

@@ -182,7 +182,7 @@ def verify_file_count(verify_path,filenames):
         count = 0
         for filename in filenames:
             if os.path.isfile(verify_path+sl()+filename[0]):
-                count +=1
+                count += 1
         assert count == len(filenames)
     else:
         assert False
@@ -225,8 +225,8 @@ def mock_dir(conf):
     generate_mocked_snap_file(new_path + sl())
 
     # important to discover the recursion error?
-    sdrecpath = Constant.base_folder+sl()+".sdRec"
-    if os.path.isfile(Constant.base_folder+sl()+".sdRec"):
+    sdrecpath = Constant.base_folder+sl()+".SdRec"
+    if os.path.isfile(Constant.base_folder+sl()+".SdRec"):
         with open(sdrecpath,'w') as file:
             file.write(get_current_date())
         file.close()

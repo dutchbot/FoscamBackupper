@@ -9,23 +9,19 @@ import foscambackup.file_helper as file_helper
 class Progress:
     """ Track progress """
     logger = logging.getLogger('Worker')
-    max_files = -1
-    done_files = 1
-    done_folders = []
-    done_progress = {}
-    cur_mode = None # used for saving progress
-    cur_folder = ""  # used for saving progress
-    absolute_dir = ""
-    complete_folders = []
 
-    # 3 responsibilities
     def __init__(self):
+        self.max_files = -1
+        self.done_files = 0
+        self.done_folders = []
+        self.done_progress = {}
+        self.cur_mode = None # used for saving progress
+        self.cur_folder = ""  # used for saving progress
         self.absolute_dir = helper.get_cwd()
+        self.complete_folders = []
+
         self.read_previous_state_file()
         self.read_state_file()
-
-    # 3 responsibilities open file, loading json, initialize..
-    # possible fix is wrapping function that takes a function that does something with the file contents
 
     def load_and_init(self, read_file):
         """ Read the dict from file and parse with JSON module """
@@ -41,6 +37,7 @@ class Progress:
             self.logger.info("No previous unfinished result found.")
 
     def load_and_init_done_folders(self, read_file):
+        """ Restore from previous file """
         content = read_file.readlines()
         for line in content:
             cleaned = helper.clean_newline_char(line)
@@ -113,16 +110,17 @@ class Progress:
             self.initialize_done_progress(combined)
             self.done_progress[combined][filename] = 0
 
-    def add_file_done(self, folder, filename):
+    def add_file_done(self, folderpath, filename):
         """ Add file to done list """
         self.logger.info("Adding file to DONE " + filename)
         try:
+            self.done_progress[folderpath][filename] = 1
             self.done_files += 1
-            self.done_progress[folder][filename] = 1
         except KeyError:
             try:
-                self.initialize_done_progress(folder)
-                self.done_progress[folder][filename] = 1
+                self.initialize_done_progress(folderpath)
+                self.done_progress[folderpath][filename] = 1
+                self.done_files += 1
             except KeyError as ex:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
@@ -137,13 +135,13 @@ class Progress:
     def init_empty(self, folder):
         return {"done": 0, "path": folder}
 
-    def initialize_done_progress(self, folder, old=None):
+    def initialize_done_progress(self, folderpath, old=None):
         """  Initialize key for a folder in our dict structure """
-        self.check_valid_folderkey(folder)
+        self.check_valid_folderkey(folderpath)
         if old != None:
-            self.done_progress[folder] = old
+            self.done_progress[folderpath] = old
         else:
-            self.done_progress[folder] = self.init_empty(folder)
+            self.done_progress[folderpath] = self.init_empty(folderpath)
 
     def compare_files_done(self, folder):
         """ Folder must be a list """

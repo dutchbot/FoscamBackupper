@@ -45,22 +45,35 @@ class TestProgress(unittest.TestCase):
         pass
 
     def test_set_max_files(self):
-        pass
+        self.progress.set_max_files(20)
+        self.assertEqual(self.progress.max_files, 20)
 
     def test_set_cur_mode(self):
-        pass
+        self.progress.set_cur_mode("record")
+        self.assertEqual(self.progress.cur_mode, "record")
 
     def test_set_cur_folder(self):
-        pass
+        self.progress.set_cur_folder("20160501")
+        self.assertEqual(self.progress.cur_folder, "20160501")
 
     def test_get_cur_folder(self):
-        pass
+        self.progress.set_cur_folder("20160501")
+        self.assertEqual(self.progress.get_cur_folder(), "20160501")
 
     def test_check_for_previous_progress(self):
-        pass
+        path = 'record/20160501'
+        self.progress.initialize_done_progress(path)
+        self.progress.done_progress[path]['2345.avi'] = 1
+        result = self.progress.check_for_previous_progress("record", "20160501", "2345.avi")
+        self.progress.done_progress[path]['233345.avi'] = 0
+        result = self.progress.check_for_previous_progress("record", "20160501", "233345.avi")
+        self.assertEqual(result, False)
 
     def test_check_done_folder(self):
-        pass
+        path = 'record/20160501'
+        self.progress.done_folders.append(path)
+        self.assertEqual(self.progress.check_done_folder("record", "20160501"), True)
+        self.assertEqual(self.progress.check_done_folder("record", "20160502"), False)
 
     def test_is_max_files_reached(self):
         self.progress.set_max_files(10)
@@ -75,10 +88,17 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.is_max_files_reached(), False)
 
     def test_add_file_init(self):
-        pass
+        path = 'record/20160501'
+        filename = "avi2345.avi"
+        self.progress.add_file_init(path, filename)
+        self.assertEqual(self.progress.done_progress[path][filename], 0)
 
     def test_add_file_done(self):
-        pass
+        path = 'record/20160501'
+        filename = "avi2345.avi"
+        self.progress.add_file_done(path, filename)
+        self.assertEqual(self.progress.done_files, 1)
+        self.assertEqual(self.progress.done_progress, {'record/20160501': {'done': 0, 'path': 'record/20160501', 'avi2345.avi': 1}})
     
     def test_check_valid_folderkey(self):
         folder = "record/20160501"
@@ -95,7 +115,14 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.init_empty(folder), {"done": 0, "path": folder})
 
     def test_initialize_done_progress(self):
-        pass
+        folder = "record/20160501"
+        empty = { folder: self.progress.init_empty(folder)}
+        self.progress.initialize_done_progress(folder)
+        self.assertDictEqual(self.progress.done_progress, empty)
+        empty[folder]['12345.avi'] = 1
+        empty[folder]['done'] = 1
+        self.progress.initialize_done_progress(folder, empty[folder])
+        self.assertDictEqual(self.progress.done_progress, empty)
 
     def test_compare_files_done(self):
         folder = "record/20160501"
