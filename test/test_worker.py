@@ -18,6 +18,12 @@ class TestWorker(unittest.TestCase):
     conf = None
     worker = None
 
+    def setUp(self):
+        mock_worker.conn.reset_mock()
+
+    def tearDown(self):
+        mock_worker.conn.reset_mock()
+
     # def setUp(self):
     #     args =  helper.get_args_obj()
     #     args["output_path"] = TestWorker.output_path

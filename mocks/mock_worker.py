@@ -16,6 +16,6 @@ def retrbinary(*args, **kwargs):
     file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')
     args[1](file_handle)
 
-conn = umock.MagicMock(name="ftp_connection", spec=FTP)
+conn = umock.MagicMock(name="ftp_connection")
 conn.mlsd = umock.Mock(side_effect=mlsd, spec=str)
 conn.retrbinary = umock.Mock(side_effect=retrbinary, spec=str)
