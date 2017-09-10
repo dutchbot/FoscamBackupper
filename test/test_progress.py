@@ -1,38 +1,20 @@
 """ Test all Progress functions """
 import json
 import unittest
-import unittest.mock as mock
+import unittest.mock as umock
 from io import StringIO
 
 import foscambackup.helper as helper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
+from mocks import mock_file_helper
 
+
+APPEND = mock_file_helper.APPEND
+READ_STATE = mock_file_helper.READ_STATE
+READ_S = mock_file_helper.READ_S
+WRITE = mock_file_helper.WRITE
 # mock file read
-
-def mocked_append(*args, **kwargs):
-    APPEND.buffer += args[0]
-
-def mocked_write(*args, **kwargs):
-    WRITE.buffer += args[0]
-
-READ_STATE = mock.MagicMock(name="open", spec=str)
-READ_STATE.read = mock.Mock(return_value=StringIO("{\"20160501_220030.avi\":1, \"done\":1, \"path\":\"record/20160501\"}"), spec=str)
-
-READ_S = mock.MagicMock(name="open", spec=str)
-READ_S.read = mock.Mock(return_value=StringIO("record/20160501"), spec=str)
-
-APPEND = mock.MagicMock(name="open")
-APPEND.write = mock.MagicMock()
-APPEND.write.side_effect = mocked_append
-APPEND.buffer = str()
-
-WRITE = mock.MagicMock(name="open", spec=bytes)
-WRITE.write = mock.MagicMock()
-WRITE.write.side_effect = mocked_write
-WRITE.buffer = str()
-
-
 class TestProgress(unittest.TestCase):
     
     def setUp(self):
@@ -42,7 +24,7 @@ class TestProgress(unittest.TestCase):
         APPEND.buffer = ""
         WRITE.buffer = ""
 
-    @mock.patch('builtins.open', READ_STATE)
+    @umock.patch('builtins.open', READ_STATE)
     def test_load_and_init(self):
         """ Test the load function"""
         read_file = READ_STATE.read()
@@ -54,7 +36,7 @@ class TestProgress(unittest.TestCase):
         """ Tested by test_load_and_init """
         pass
 
-    @mock.patch('builtins.open', READ_S)
+    @umock.patch('builtins.open', READ_S)
     def test_load_and_init_done_folders(self):
         read_file = READ_S.read()
         path = 'record/20160501'
@@ -151,14 +133,14 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_220030.avi'] = 1
         folders[folder]['20160501_230030.avi'] = 1
         self.progress.done_progress = folders
-        with unittest.mock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
+        with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
             self.assertListEqual(self.progress.check_folders_done(), [folder])
 
     def test_write_done_folder_to_newline(self):
         folder = "record/20160501"
         args = {"path": folder}
 
-        with unittest.mock.patch('builtins.open', APPEND) as appender:
+        with umock.patch('builtins.open', APPEND) as appender:
             self.progress.write_done_folder_to_newline(appender, args)
 
         self.assertEqual(APPEND.buffer, folder+"\n")
@@ -167,7 +149,7 @@ class TestProgress(unittest.TestCase):
         foldername = "record/20160501"
         folder = {foldername: {"done":1, "path":foldername}}
         self.progress.done_progress[folder[foldername]['path']] = folder[foldername]
-        with unittest.mock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
+        with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
             self.progress.write_done_folder(folder[foldername], foldername)
         self.assertEqual(self.progress.done_progress, folder)
         self.assertEqual(self.progress.complete_folders, [folder[foldername]['path']])
@@ -183,7 +165,7 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_150030.avi'] = 0
         self.progress.done_progress = folders
         self.progress.cur_folder = folder
-        with unittest.mock.patch('builtins.open', APPEND):
+        with umock.patch('builtins.open', APPEND):
             self.assertEqual(self.progress.save(), True)
 
     def test_write_progress_folder(self):
@@ -195,7 +177,7 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_150030.avi'] = 0
         args = {"enc": json.dumps(folders[folder])}
 
-        with unittest.mock.patch('builtins.open', WRITE) as writer:
+        with umock.patch('builtins.open', WRITE) as writer:
             self.progress.write_progress_folder(writer, args)
 
         self.assertEqual(WRITE.buffer, args['enc'])
@@ -227,14 +209,14 @@ class TestProgress(unittest.TestCase):
         def mocked_open_write_file(path, writer, args):
             writer(WRITE, args)
 
-        WRITE.open_write_file = mock.Mock(side_effect=mocked_open_write_file)
+        WRITE.open_write_file = umock.Mock(side_effect=mocked_open_write_file)
 
-        with unittest.mock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
+        with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
             result = self.progress.save_progress_for_unfinished(folder)
         self.assertEqual(result, False)
 
         self.progress.done_progress = folders
-        with unittest.mock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
+        with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
             result = self.progress.save_progress_for_unfinished(folder)
             self.assertEqual(result, True)
             self.assertEqual(WRITE.buffer, args['enc'])

@@ -1,15 +1,15 @@
 import os
 import unittest
+import unittest.mock as umock
 import zipfile
+from unittest.mock import call
 
 import helper
 from foscambackup.conf import Conf
+from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
-from foscambackup.constant import Constant
-import unittest.mock as umock
-from unittest.mock import call
-from mock import mock_worker
+from mocks import mock_worker
 
 
 class TestWorker(unittest.TestCase):
@@ -137,8 +137,8 @@ class TestWorker(unittest.TestCase):
 
         mock_worker.conn.reset_mock()
 
-        with unittest.mock.patch('foscambackup.worker.Worker.get_footage', mocked_footage), \
-            unittest.mock.patch('foscambackup.worker.Worker.check_done_folders', check_done):
+        with umock.patch('foscambackup.worker.Worker.get_footage', mocked_footage), \
+            umock.patch('foscambackup.worker.Worker.check_done_folders', check_done):
                 worker.get_files()
 
         calls = [call.mlsd('/'), call.retrbinary('RETR .SdRec', worker.read_sdrec_content)]

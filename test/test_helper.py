@@ -1,7 +1,7 @@
 
 import foscambackup.helper as helper
 import unittest
-import unittest.mock as mock
+import unittest.mock as umock
 import time
 
 class TestHelper(unittest.TestCase):
@@ -43,9 +43,9 @@ class TestHelper(unittest.TestCase):
             folder_parent), folder_parent)
 
     def test_cleanup_directories(self):
-        shutil = mock.MagicMock()
-        shutil.rmtree = mock.MagicMock()
-        with mock.patch("shutil.rmtree", shutil):
+        shutil = umock.MagicMock()
+        shutil.rmtree = umock.MagicMock()
+        with umock.patch("shutil.rmtree", shutil):
             helper.cleanup_directories("testfolder")
         self.assertEqual(shutil.called, True)
 
@@ -54,13 +54,13 @@ class TestHelper(unittest.TestCase):
             """ mocked """
             return args
 
-        shutil = mock.MagicMock()
-        shutil.rmtree = mock.MagicMock(side_effect=rmtree)
-        shutil.on_error = mock.MagicMock()
-        with mock.patch("shutil.rmtree", shutil.rmtree), \
-                mock.patch("foscambackup.helper.on_error", shutil.on_error):
+        shutil = umock.MagicMock()
+        shutil.rmtree = umock.MagicMock(side_effect=rmtree)
+        shutil.on_error = umock.MagicMock()
+        with umock.patch("shutil.rmtree", shutil.rmtree), \
+                umock.patch("foscambackup.helper.on_error", shutil.on_error):
             helper.cleanup_directories("testfolder")
-        calls = [mock.call.rmtree(
+        calls = [umock.call.rmtree(
             'testfolder', ignore_errors=False, onerror=shutil.on_error)]
         self.assertListEqual(shutil.method_calls, calls)
 
@@ -71,7 +71,7 @@ class TestHelper(unittest.TestCase):
 
     def test_get_abs_path(self):
         mode = {"folder": "record"}
-        conf = mock.MagicMock()
+        conf = umock.MagicMock()
         conf.model = "FXXXCC_EEEE" # TODO add helper method to validate model_serial
         self.assertEqual(helper.get_abs_path(conf, mode),
                          "/IPCamera/" + conf.model + "/" + mode['folder'])

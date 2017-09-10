@@ -8,7 +8,7 @@ import unittest
 from ftplib import error_perm
 from threading import Thread
 
-from mock import mock_server
+from mocks import mock_server
 from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress

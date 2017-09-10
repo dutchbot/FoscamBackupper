@@ -1,5 +1,5 @@
 from foscambackup.constant import Constant
-import unittest.mock as mock
+import unittest.mock as umock
 from ftplib import FTP
 from unittest.mock import call
 import helper
@@ -16,6 +16,6 @@ def retrbinary(*args, **kwargs):
     file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')
     args[1](file_handle)
 
-conn = mock.MagicMock(name="ftp_connection", spec=FTP)
-conn.mlsd = mock.Mock(side_effect=mlsd, spec=str)
-conn.retrbinary = mock.Mock(side_effect=retrbinary, spec=str)
+conn = umock.MagicMock(name="ftp_connection", spec=FTP)
+conn.mlsd = umock.Mock(side_effect=mlsd, spec=str)
+conn.retrbinary = umock.Mock(side_effect=retrbinary, spec=str)
