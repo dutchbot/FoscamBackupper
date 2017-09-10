@@ -30,13 +30,6 @@ def check_not_curup(foldername):
     """
     return not '..' in foldername and foldername != '.'
 
-def select_folder(folders=[]):
-    """ Set remote folder command """
-    base = "CWD " + sl() + Constant.base_folder
-    for folder in folders:
-        base = base + sl() + folder
-    return base
-
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
     splitted = folder.split(sl())
@@ -45,16 +38,6 @@ def clean_folder_path(folder):
     if len(splitted) == 3:
         return construct_path(splitted[0], [splitted[1]])
     return folder
-
-def create_retr(path):
-    """ Create the RETR command at path """
-    if "." in path: # Really basic check for file ext
-        return "RETR " + path
-    raise ValueError("Malformed path, missing file ext?")
-
-def set_remote_folder_fullpath(connection, fullpath):
-    """ Set remote folder """
-    connection.sendcmd(fullpath)
 
 def cleanup_directories(folder):
     """ Used to cleanup a tree of folders and files """

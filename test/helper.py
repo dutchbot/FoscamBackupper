@@ -52,15 +52,15 @@ def get_current_date_time_offset(offset):
         l_timestr[-1] = calc_offset[1]
         time_str = ''.join(l_timestr)
         return time_str
-    return time.strftime("%Y%m%d-%H%M%S")
+    return time.strftime("%Y%m%d_%H%M%S")
 
 def get_current_date():
     """ This is the format for the date folder where the subfolders and files will be located. """
-    return time.strftime("%Y%m%d")
+    return helper.get_current_date()
 
 def get_current_date_time_rounded():
     """ This how the foscam model constructs the subfolders located in a date folder. """
-    return time.strftime("%Y%m%d-%H0000")
+    return time.strftime("%Y%m%d_%H0000")
 
 def get_current_date_offset_day():
     """ Get current date and offset the day """
@@ -80,7 +80,7 @@ def get_current_date_offset_day():
 def get_current_date_time_rounded_offset():
     """ This how the foscam model constructs the subfolders located in a date folder. """
     offset = 1
-    time_str = time.strftime("%Y%m%d-%H0000")
+    time_str = time.strftime("%Y%m%d_%H0000")
     calc_offset = str(int(time_str[-6:-4]) + offset)
     l_timestr = list(time_str)
     l_timestr[-6] = calc_offset[0]
@@ -90,7 +90,7 @@ def get_current_date_time_rounded_offset():
 
 def get_current_date_time():
     """ This is how the filenames are constructed on the foscam camera."""
-    return time.strftime("%Y%m%d-%H%M%S")
+    return time.strftime("%Y%m%d_%H%M%S")
 
 def get_verbosity():
     """Return current verbosity"""

@@ -8,7 +8,7 @@ import unittest
 from ftplib import error_perm
 from threading import Thread
 
-import mock_server
+from mock import mock_server
 from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
@@ -111,7 +111,7 @@ class TestIntegrationWorker(unittest.TestCase):
         loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir,'abs_path': abs_path,
             'filename': filename, 'desc': desc}
         self.worker.retrieve_and_write_file(loc_info)
-        verify_path = helper.construct_path(self.args['output_path'],[m_folder,parent_dir,filename])
+        verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
         if os.path.exists(verify_path):
             assert True
         else:
@@ -124,7 +124,10 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_recorded_footage()
+        mode = {"wanted_files": Constant.wanted_files_record,
+        "folder": Constant.record_folder, "int_mode": 0}
+        self.progress.current_mode = Constant.record_folder
+        self.worker.get_footage(mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
     
@@ -136,7 +139,10 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_recorded_footage()
+        mode = {"wanted_files": Constant.wanted_files_record,
+        "folder": Constant.record_folder, "int_mode": 0}
+        self.progress.current_mode = Constant.record_folder
+        self.worker.get_footage(mode)
         #force it
         dict_folder ={"path":folder+helper.sl()+parent_dir}
         self.progress.write_done_folder(dict_folder, dict_folder['path'])
@@ -152,7 +158,10 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'snap'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        self.worker.get_snapshot_footage()
+        mode = {"wanted_files": Constant.wanted_files_snap,
+        "folder": Constant.snap_folder, "int_mode": 1}
+        self.progress.current_mode = Constant.snap_folder
+        self.worker.get_footage(mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
 
@@ -181,10 +190,12 @@ class TestIntegrationWorker(unittest.TestCase):
             self.args["delete_rm"] = True
             self.connection = ftp_helper.open_connection(self.conf)
             self.worker = Worker(self.connection, self.progress, self.args)
-            mode_folder = 'record'
-            self.worker.get_recorded_footage()
+            mode = {"wanted_files": Constant.wanted_files_record,
+            "folder": Constant.record_folder, "int_mode": 0}
+            self.progress.current_mode = Constant.record_folder
+            self.worker.get_footage(mode)
             self.worker.check_done_folders()
-            self.assertTrue(self.check_parent_dir_deleted(mode_folder))
+            self.assertTrue(self.check_parent_dir_deleted(mode['folder']))
         else:
             pass
 
