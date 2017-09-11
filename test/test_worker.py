@@ -24,12 +24,12 @@ class TestWorker(unittest.TestCase):
         self.args['conf'] = Conf()
         self.progress = Progress()
         self.worker = Worker(mock_worker.conn, self.progress, self.args)
-        #helper.log_to_stdout('Worker')
+        helper.log_to_stdout('Worker','info')
 
     def tearDown(self):
         mock_worker.conn.reset_mock()
 
-    ##@unittest.SkipTest
+    #@unittest.SkipTest
     # def setUp(self):
     #     args =  helper.get_args_obj()
     #     args["output_path"] = TestWorker.output_path
@@ -38,7 +38,7 @@ class TestWorker(unittest.TestCase):
     #     self.progress = Progress()
     #     self.worker = Worker(Connection(), self.progress, self.args)
 
-    ##@unittest.SkipTest
+    #@unittest.SkipTest
     # def tearDown(self):
     #     helper.clear_log()
 
@@ -48,13 +48,13 @@ class TestWorker(unittest.TestCase):
     #     helper.log_to_stdout('Worker')
     #     TestWorker.conf =  helper.read_conf()
 
-    ##@unittest.SkipTest
+    #@unittest.SkipTest
     # @staticmethod
     # def tearDownClass():
     #     MockFTPServer.cleanup_remote_directory()
     #     helper.cleanup_directories(TestWorker.output_path)
 
-    ##@unittest.SkipTest
+    #@unittest.SkipTest
     # def test_worker_local_delete(self):
     #     """ Test local deletion of folder """
     #     # Important
@@ -72,7 +72,7 @@ class TestWorker(unittest.TestCase):
 
     #     self.assertFalse(os.path.isdir(new_path))
 
-    ##@unittest.SkipTest
+    #@unittest.SkipTest
     # def test_worker_zipfile(self):
     #     """ Test zip local file functionality """
     #     self.args["dry_run"] = False
@@ -147,7 +147,7 @@ class TestWorker(unittest.TestCase):
         # want to test if folder recording is skipped
         # want to verify that the cur folder is set on progress object
         # done: assert number of files downloaded are correct.
-        self.args['conf'].model = "FXXX_CEEE"
+        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE" #verified with regex
         def mlsd(*args, **kwargs):
             if args[0] == "/":
                 yield (".", {'type':'dir'})
@@ -155,26 +155,29 @@ class TestWorker(unittest.TestCase):
             else:
                 yield (".", {'type':'dir'})
                 yield ("..", {'type':'dir'})
-                if args[0] == "/IPCamera/FXXX_CEEE/snap":
+                if args[0] == "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap":
                     yield ("20170101", {'type':'dir'})
                     yield ("20170102", {'type':'dir'})
                     yield ("20170103", {'type':'dir'})
                     yield ("20170104", {'type':'dir'})
                     yield (helper.get_current_date(), {'type':'dir'})
-                if args[0].count(helper.sl()) == 4:
+                if  args[0].count(helper.sl()) == 5:
+                    dirname = args[0].split(helper.sl())[5]
+                    yield (dirname+".jpg", {'type':'file'})
+                elif args[0].count(helper.sl()) == 4:
                     dirname = args[0].split(helper.sl())[4]
                     yield (dirname+"_120000", {'type':'dir'})
                     yield (dirname+"_140000", {'type':'dir'})
                     yield (dirname+"_160000", {'type':'dir'})
                     yield (dirname+"_170000", {'type':'dir'})
-                if  args[0].count(helper.sl()) == 5:
-                    dirname = args[0].split(helper.sl())[5]
-                    yield (dirname+".jpg", {'type':'file'})
+
         mock_worker.conn.mlsd.side_effect = mlsd
         def download_file(loc_info):
+            print("Download called")
             return True
         download = umock.MagicMock()
         download.download_file = umock.MagicMock(side_effect=download_file)
+
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file):
             # RECORDING
             file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')

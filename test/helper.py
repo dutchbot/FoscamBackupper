@@ -214,10 +214,13 @@ def cleanup_directories(folder):
         print("Clean : "+ folder)
         shutil.rmtree(folder, ignore_errors=False, onerror=on_error)
 
-def log_to_stdout(logname):
+def log_to_stdout(logname, level=''):
     if get_verbosity() == 2:
         logger = logging.getLogger(logname)
-        logger.setLevel(logging.DEBUG)
+        if level == '':
+            logger.setLevel(logging.DEBUG)
+        elif level == 'info':
+            logger.setLevel(logging.INFO)
         channel = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')

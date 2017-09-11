@@ -117,27 +117,29 @@ class Worker:
         self.log_debug("Found subdirs: "+ str(file_list))
         for foldername, desc in file_list:
             # do not add the time period folders
-            if self.progress.check_for_previous_progress(mode["folder"], parent, foldername):
-                self.log_debug("skipping: " + foldername)
-                continue
             if self.progress.is_max_files_reached() is True:
                 self.progress.save_progress()
                 sys.exit()
 
-            if helper.not_check_subdir(subdir,foldername) == False:
+            if helper.not_check_subdir(subdir, foldername) is False:
                 continue
+
             if subdir:
-                subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, foldername])
+                if desc['type'] == 'file':
+                    subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, subdir['current']])
+                else:
+                    subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, foldername])
             else:
                 subdir = {"path":'', "subdirs":[foldername]}
                 subdir['path'] = helper.construct_path(helper.get_abs_path(
                     self.conf, mode), [parent, foldername])
             if helper.check_file_type_dir(desc) and subdir['path'] != "" and helper.check_not_curup(foldername):
                 path = subdir['path']
-                self.log_debug("Querying path: " + path)
+                self.log_info("Querying path: " + path)
                 file_list_subdir = ftp_helper.mlsd(self.connection, path)
                 if subdir:
                     subdir['subdirs'].append(foldername)
+                    subdir['current'] = foldername
                 self.crawl_folder(file_list_subdir, mode, parent, subdir)
             else:
                 abs_path = helper.construct_path(subdir['path'], [foldername])
@@ -281,6 +283,9 @@ class Worker:
                 self.log_debug("Deleted " + action_key + ": " + folder)
 
     def crawl_files(self, loc_info):
+        if self.progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info['parent_dir'], loc_info['filename']):
+            self.log_debug("skipping: " + loc_info['filename'])
+            return
         self.log_debug("Called craw files with: " + str(loc_info))
         """ Process the actual files """
         if helper.check_not_dat_file(loc_info['filename']):
@@ -317,6 +322,7 @@ class Worker:
         self.log_debug(local_file_path)
         wrapper = None
         try:
+            helper.verify_path(loc_info['abs_path'])
             wrapper = FileWrapper(local_file_path)
             call = wrapper.write_to_file
             ftp_helper.retr(self.connection, ftp_helper.create_retr(
