@@ -3,21 +3,25 @@ import os
 def open_readonly_file(path, function):
     """ Use to read file, use callback for interacting with file """
     if os.path.isfile(path):
+        read_file = None
         try:
-            with open(path, "r") as read_only_file:
-                function(read_only_file)
+            read_file =  open(path, "r")
+            function(read_file)
         finally:
-            read_only_file.close()
+            if read_file:
+                read_file.close()
     else:
         raise FileNotFoundError("File or path does not exist!")
 
 def open_appendonly_file(path, function, args):
     """ Use to append file, use callback with args for interacting with file """
+    append_file = None
     try:
-        with open(path, "a") as append_file:
-            function(append_file, args)
+        append_file = open(path, "a")
+        function(append_file, args)
     finally:
-        append_file.close()
+        if append_file:
+            append_file.close()
 
 def open_write_file(path, function, args):
     """ Use to write file, use callback with args for interacting with file """
