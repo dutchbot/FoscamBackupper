@@ -172,20 +172,26 @@ class TestWorker(unittest.TestCase):
                     yield (dirname+"_170000", {'type':'dir'})
 
         mock_worker.conn.mlsd.side_effect = mlsd
+        def makedirs(path):
+            return ""
+
         def download_file(loc_info):
             print("Download called")
             return True
         download = umock.MagicMock()
         download.download_file = umock.MagicMock(side_effect=download_file)
 
-        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file):
+        osmakedirs = umock.MagicMock()
+        osmakedirs.makedirs = umock.MagicMock(side_effect=download_file)
+
+        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
+            umock.patch("os.makedirs", osmakedirs):
             # RECORDING
             file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')
             self.worker.read_sdrec_content(file_handle)
             self.worker.get_footage(mode_snap)
             self.assertEqual(self.worker.progress.done_files, 16)
         
-        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file):
             self.args['conf'].currently_recording = False
             self.worker.get_footage(mode_snap)
             self.assertEqual(self.worker.progress.done_files, 20)

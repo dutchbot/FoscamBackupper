@@ -70,6 +70,13 @@ class TestHelper(unittest.TestCase):
         self.assertEqual(helper.clean_newline_char(val), "test")
         self.assertEqual(helper.clean_newline_char("test"), "test")
 
+    def test_verify_path(self):
+        path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910-143000/testfile.avi"
+        self.assertEqual(helper.verify_path(path), True)
+        with self.assertRaises(ValueError):
+            path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910.av/testfile.avi"
+            helper.verify_path(path)
+
     def test_get_abs_path(self):
         mode = {"folder": "record"}
         conf = umock.MagicMock()

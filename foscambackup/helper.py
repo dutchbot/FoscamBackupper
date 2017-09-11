@@ -62,9 +62,9 @@ def clean_newline_char(line):
 
 def verify_path(path):
     import re
-    p = re.compile('\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}_[0-9]{6}')
+    p = re.compile('\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}\/')
     if(p.match(path)):
-        return
+        return True
     raise ValueError("Invalid constructed path!")
 
 def get_abs_path(conf, mode):
