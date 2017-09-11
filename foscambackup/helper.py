@@ -79,3 +79,11 @@ def construct_path(start, folders=[], endslash=False):
         if len(folders) == count and endslash:
             start += sl()
     return start
+
+def check_valid_folderkey(folder):
+    """ Verify that key is correct """
+    if folder is None or folder == '':
+        raise ValueError("Foldername empty!")
+    if sl() in folder and len(folder.split(sl())[1]) == 8:
+        return True
+    raise ValueError("Foldername truncated!")

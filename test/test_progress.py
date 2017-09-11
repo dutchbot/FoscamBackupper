@@ -87,16 +87,6 @@ class TestProgress(unittest.TestCase):
         self.progress.add_file_done(path, filename)
         self.assertEqual(self.progress.done_files, 1)
         self.assertEqual(self.progress.done_progress, {'record/20160501': {'done': 0, 'path': 'record/20160501', 'avi2345.avi': 1}})
-    
-    def test_check_valid_folderkey(self):
-        folder = "record/20160501"
-        self.assertEqual(self.progress.check_valid_folderkey(folder), True)
-        folder = "20160501"
-        with self.assertRaises(ValueError):
-            self.progress.check_valid_folderkey(folder)
-        folder = ""
-        with self.assertRaises(ValueError):
-            self.progress.check_valid_folderkey(folder)
 
     def test_init_empty(self):
         folder = "record/20160501"

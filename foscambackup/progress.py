@@ -106,21 +106,13 @@ class Progress:
                 self.logger.warning("Key error file_done: " + ex.__str__())
                 self.logger.debug(self.done_progress)
 
-    def check_valid_folderkey(self, folder):
-        """ Verify that key is correct """
-        if folder is None or folder == '':
-            raise ValueError("Foldername empty!")
-        if helper.sl() in folder and len(folder.split(helper.sl())[1]) == 8:
-            return True
-        raise ValueError("Foldername truncated!")
-
     def init_empty(self, folder):
         """ Init empty folder """
         return {"done": 0, "path": folder}
 
     def initialize_done_progress(self, folderpath, old=None):
         """  Initialize key for a folder in our dict structure """
-        self.check_valid_folderkey(folderpath)
+        helper.check_valid_folderkey(folderpath)
         if old != None:
             self.done_progress[folderpath] = old
         else:

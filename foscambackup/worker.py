@@ -110,6 +110,7 @@ class Worker:
 
     def init_zip_folder(self, key):
         """ Initialize the key for folder with dict object """
+        helper.check_valid_folderkey(key)
         self.folder_actions[key] = {"zipped": 0,
                                     "remote_deleted": 0, "local_deleted": 0}
 
