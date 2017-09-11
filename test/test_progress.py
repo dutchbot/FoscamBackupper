@@ -15,6 +15,7 @@ READ_STATE = mock_file_helper.READ_STATE
 READ_S = mock_file_helper.READ_S
 WRITE = mock_file_helper.WRITE
 # mock file read
+#@unittest.SkipTest
 class TestProgress(unittest.TestCase):
     
     def setUp(self):

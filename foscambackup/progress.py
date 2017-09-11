@@ -188,6 +188,9 @@ class Progress:
             enc = json.dumps(last_file)
             path = helper.construct_path(self.absolute_dir, [Constant.previous_state])
             args = {'enc':enc}
+            import os
+            if os.path.isfile(path):
+                os.remove(path)
             file_helper.open_write_file(path, self.write_progress_folder, args)
             return True
         return False

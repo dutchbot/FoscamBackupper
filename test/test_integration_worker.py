@@ -18,6 +18,7 @@ import helper
 
 DELETE_TESTS = True
 
+@unittest.SkipTest
 class TestIntegrationWorker(unittest.TestCase):
     """ Basically an integration / system test """
     thread = None

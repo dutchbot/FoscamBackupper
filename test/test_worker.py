@@ -11,6 +11,10 @@ from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 from mocks import mock_worker
 
+mode_record = {"wanted_files": Constant.wanted_files_record,
+"folder": Constant.record_folder, "int_mode": 0}
+mode_snap = {"wanted_files": Constant.wanted_files_snap,
+"folder": Constant.snap_folder, "int_mode": 1}
 
 class TestWorker(unittest.TestCase):
 
@@ -20,10 +24,12 @@ class TestWorker(unittest.TestCase):
         self.args['conf'] = Conf()
         self.progress = Progress()
         self.worker = Worker(mock_worker.conn, self.progress, self.args)
+        #helper.log_to_stdout('Worker')
 
     def tearDown(self):
         mock_worker.conn.reset_mock()
 
+    ##@unittest.SkipTest
     # def setUp(self):
     #     args =  helper.get_args_obj()
     #     args["output_path"] = TestWorker.output_path
@@ -32,19 +38,23 @@ class TestWorker(unittest.TestCase):
     #     self.progress = Progress()
     #     self.worker = Worker(Connection(), self.progress, self.args)
 
+    ##@unittest.SkipTest
     # def tearDown(self):
     #     helper.clear_log()
 
+    #unittest.SkipTest
     # @staticmethod
     # def setUpClass():
     #     helper.log_to_stdout('Worker')
     #     TestWorker.conf =  helper.read_conf()
 
+    ##@unittest.SkipTest
     # @staticmethod
     # def tearDownClass():
     #     MockFTPServer.cleanup_remote_directory()
     #     helper.cleanup_directories(TestWorker.output_path)
 
+    ##@unittest.SkipTest
     # def test_worker_local_delete(self):
     #     """ Test local deletion of folder """
     #     # Important
@@ -62,6 +72,7 @@ class TestWorker(unittest.TestCase):
 
     #     self.assertFalse(os.path.isdir(new_path))
 
+    ##@unittest.SkipTest
     # def test_worker_zipfile(self):
     #     """ Test zip local file functionality """
     #     self.args["dry_run"] = False
@@ -80,6 +91,7 @@ class TestWorker(unittest.TestCase):
     #     list_files = zip_file.namelist()
     #     self.assertListEqual(created_files, list_files)
 
+    #@unittest.SkipTest
     def test_check_currently_recording(self):
         """ Test the behavior of setting the current_recording value to true/false """
         self.worker.check_currently_recording()
@@ -89,6 +101,7 @@ class TestWorker(unittest.TestCase):
         self.worker.check_currently_recording()
         self.assertEqual(self.args['conf'].currently_recording, False)
 
+    #@unittest.SkipTest
     def test_read_sdrec_content(self):
         """ Test the behavior of setting the current_recording value to true/false """
         file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')
@@ -98,16 +111,14 @@ class TestWorker(unittest.TestCase):
         self.worker.read_sdrec_content(file_handle)
         self.assertEqual(self.args['conf'].currently_recording, False)
 
+    #@unittest.SkipTest
     def test_update_conf(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_get_files(self):
         """  Test that the expected functions get called, and proper mode objects are used """
-        mode_record = {"wanted_files": Constant.wanted_files_record,
-        "folder": Constant.record_folder, "int_mode": 0}
-        mode_snap = {"wanted_files": Constant.wanted_files_snap,
-        "folder": Constant.snap_folder, "int_mode": 1}
         result = []
         def get_footage(*args, **kwargs):
             result.append(args[0])
@@ -132,23 +143,66 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(mock_worker.conn.method_calls, calls, "Called check_currently_recording")
 
     def test_get_footage(self):
-        #TODO
+        # TODO:
         # want to test if folder recording is skipped
         # want to verify that the cur folder is set on progress object
-        pass
+        # done: assert number of files downloaded are correct.
+        self.args['conf'].model = "FXXX_CEEE"
+        def mlsd(*args, **kwargs):
+            if args[0] == "/":
+                yield (".", {'type':'dir'})
+                yield (Constant.sd_rec, {'type':'dir'})
+            else:
+                yield (".", {'type':'dir'})
+                yield ("..", {'type':'dir'})
+                if args[0] == "/IPCamera/FXXX_CEEE/snap":
+                    yield ("20170101", {'type':'dir'})
+                    yield ("20170102", {'type':'dir'})
+                    yield ("20170103", {'type':'dir'})
+                    yield ("20170104", {'type':'dir'})
+                    yield (helper.get_current_date(), {'type':'dir'})
+                if args[0].count(helper.sl()) == 4:
+                    dirname = args[0].split(helper.sl())[4]
+                    yield (dirname+"_120000", {'type':'dir'})
+                    yield (dirname+"_140000", {'type':'dir'})
+                    yield (dirname+"_160000", {'type':'dir'})
+                    yield (dirname+"_170000", {'type':'dir'})
+                if  args[0].count(helper.sl()) == 5:
+                    dirname = args[0].split(helper.sl())[5]
+                    yield (dirname+".jpg", {'type':'file'})
+        mock_worker.conn.mlsd.side_effect = mlsd
+        def download_file(loc_info):
+            return True
+        download = umock.MagicMock()
+        download.download_file = umock.MagicMock(side_effect=download_file)
+        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file):
+            # RECORDING
+            file_handle = bytes(helper.get_current_date_time_rounded(),'ascii')
+            self.worker.read_sdrec_content(file_handle)
+            self.worker.get_footage(mode_snap)
+            self.assertEqual(self.worker.progress.done_files, 16)
+        
+        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file):
+            self.args['conf'].currently_recording = False
+            self.worker.get_footage(mode_snap)
+            self.assertEqual(self.worker.progress.done_files, 20)
 
+    #@unittest.SkipTest
     def test_init_zip_folder(self):
         # verify initialized dict for given folder key
         self.worker.init_zip_folder("record/20160601")
         verify = {"record/20160601":{"zipped": 0,"remote_deleted": 0, "local_deleted": 0}}
         self.assertDictEqual(self.worker.folder_actions, verify)
 
+    #@unittest.SkipTest
     def test_zip_local_files_folder(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_delete_local_folder(self):
-        # verify cleanup directories is called
+        # #@unittest.SkipTestver
+        # ify cleanup directories is called
         # verify folder_action local_deleted is set to True
         def delete_local(fullpath):
             return True
@@ -164,6 +218,7 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(m_helper.call_args_list, [call('/output/record/20170101')])
         self.assertDictEqual(self.worker.folder_actions, verify)
 
+    #@unittest.SkipTest
     def test_set_remote_deleted(self):
         """ Verify remote deleted value is set to 1 """
         folder = "record/20170101"
@@ -173,6 +228,7 @@ class TestWorker(unittest.TestCase):
         verify = {folder:{"zipped": 0,"remote_deleted": 1, "local_deleted": 0}}
         self.assertDictEqual(self.worker.folder_actions, verify)
 
+    #@unittest.SkipTest
     def test_get_remote_deleted(self):
         folder = "record/20170101"
         self.worker.init_zip_folder(folder) #important
@@ -181,38 +237,47 @@ class TestWorker(unittest.TestCase):
         self.worker.set_remote_deleted(folder)
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
+    #@unittest.SkipTest
     def test_recursive_delete(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_delete_remote_folder(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_check_done_folders(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_zip_and_delete(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_check_folder_state_delete(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_crawl_folder(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_crawl_files(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_retrieve_and_write_file(self):
         #TODO
         pass
 
+    #@unittest.SkipTest
     def test_download_file(self):
         #TODO
         pass

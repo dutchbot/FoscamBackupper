@@ -3,8 +3,8 @@ import os
 import sys
 import unittest
 
-#from test_integration_worker import TestIntegrationWorker
-#TestIntegrationWorker.output_path = "output-test-integration"
+from test_integration_worker import TestIntegrationWorker
+TestIntegrationWorker.output_path = "output-test-integration"
 from test_helper import TestHelper
 from test_ftp_helper import TestFtpHelper
 from test_file_helper import TestFileHelper

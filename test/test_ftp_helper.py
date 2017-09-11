@@ -8,6 +8,7 @@ import unittest
 conn = copy.deepcopy(mock_worker.conn) # Fix for reusing static conn
 call = umock.call
 
+#@unittest.SkipTest
 class TestFtpHelper(unittest.TestCase):
 
     def test_close_connection(self):

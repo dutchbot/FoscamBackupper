@@ -31,9 +31,10 @@ Note that the model_serial can be left as it is, the code will try to retrieve i
 # Building for Windows
 ```
 pip install pyinstaller
-pyinstaller.exe main.py --noconfirm --onefile
+pyinstaller.exe main.py --noconfirm --onefile --exclude test
 ```
 
 # exec test
 
 `python test\runtests_local.py`
+

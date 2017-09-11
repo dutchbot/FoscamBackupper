@@ -87,3 +87,8 @@ def check_valid_folderkey(folder):
     if sl() in folder and len(folder.split(sl())[1]) == 8:
         return True
     raise ValueError("Foldername truncated!")
+
+def not_check_subdir(subdir, foldername):
+    if subdir:
+        return not foldername in subdir['subdirs']
+    return True

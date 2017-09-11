@@ -74,14 +74,18 @@ class Worker:
     def get_files(self):
         """ Get the files for both recorded an snapshot footage """
         self.check_currently_recording()
-        mode = {"wanted_files": Constant.wanted_files_record,
-        "folder": Constant.record_folder, "int_mode": 0}
-        self.progress.current_mode = Constant.record_folder
-        self.get_footage(mode)
-        mode = {"wanted_files": Constant.wanted_files_snap,
-        "folder": Constant.snap_folder, "int_mode": 1}
-        self.progress.current_mode = Constant.snap_folder
-        self.get_footage(mode)
+        mode_record = {"wanted_files": Constant.wanted_files_record,
+                "folder": Constant.record_folder, "int_mode": 0}
+        mode_snap = {"wanted_files": Constant.wanted_files_snap,
+                "folder": Constant.snap_folder, "int_mode": 1}
+        if self.args['mode'] != None:
+            if self.args['mode'] == Constant.record_folder:
+                self.get_footage(mode_record)
+            else:
+                self.get_footage(mode_snap)
+        else:
+            self.get_footage(mode_record)
+            self.get_footage(mode_snap)
         self.check_done_folders()
         self.log_info("finished downloading files")
 
@@ -106,7 +110,40 @@ class Worker:
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, pdir)
                 else:
-                    self.log_info("skipping folder")
+                    self.log_info("skipping folder because already done")
+
+    def crawl_folder(self, file_list, mode, parent, subdir=None):
+        """ Find the files to download in their respective directories """
+        self.log_debug("Found subdirs: "+ str(file_list))
+        for foldername, desc in file_list:
+            # do not add the time period folders
+            if self.progress.check_for_previous_progress(mode["folder"], parent, foldername):
+                self.log_debug("skipping: " + foldername)
+                continue
+            if self.progress.is_max_files_reached() is True:
+                self.progress.save_progress()
+                sys.exit()
+
+            if helper.not_check_subdir(subdir,foldername) == False:
+                continue
+            if subdir:
+                subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, foldername])
+            else:
+                subdir = {"path":'', "subdirs":[foldername]}
+                subdir['path'] = helper.construct_path(helper.get_abs_path(
+                    self.conf, mode), [parent, foldername])
+            if helper.check_file_type_dir(desc) and subdir['path'] != "" and helper.check_not_curup(foldername):
+                path = subdir['path']
+                self.log_debug("Querying path: " + path)
+                file_list_subdir = ftp_helper.mlsd(self.connection, path)
+                if subdir:
+                    subdir['subdirs'].append(foldername)
+                self.crawl_folder(file_list_subdir, mode, parent, subdir)
+            else:
+                abs_path = helper.construct_path(subdir['path'], [foldername])
+                loc_info = {'mode': mode, 'parent_dir': parent, 'abs_path': abs_path,
+                            'filename': foldername, 'desc': desc}
+                self.crawl_files(loc_info)
 
     def init_zip_folder(self, key):
         """ Initialize the key for folder with dict object """
@@ -243,30 +280,8 @@ class Worker:
                 self.folder_actions[folder][action_key] = 1
                 self.log_debug("Deleted " + action_key + ": " + folder)
 
-    def crawl_folder(self, file_list, mode, parent, path=""):
-        """ Find the files to download in their respective directories """
-        for foldername, desc in file_list:
-            # do not add the time period folders
-            if self.progress.check_for_previous_progress(mode["folder"], parent, foldername):
-                self.log_debug("skipping: " + foldername)
-                continue
-            if self.progress.is_max_files_reached() is True:
-                self.progress.save_progress()
-                sys.exit()
-            if path == "":
-                path = helper.construct_path(helper.get_abs_path(
-                    self.conf, mode), [parent, foldername])
-            if desc['type'] == 'dir' and path != "" and helper.check_not_curup(foldername):
-                self.log_debug("Querying path: " + path)
-                file_list_subdir = ftp_helper.mlsd(self.connection, path)
-                self.crawl_folder(file_list_subdir, mode, parent, path)
-            else:
-                abs_path = helper.construct_path(path, [foldername])
-                loc_info = {'mode': mode, 'parent_dir': parent, 'abs_path': abs_path,
-                            'filename': foldername, 'desc': desc}
-                self.crawl_files(loc_info)
-
     def crawl_files(self, loc_info):
+        self.log_debug("Called craw files with: " + str(loc_info))
         """ Process the actual files """
         if helper.check_not_dat_file(loc_info['filename']):
             self.progress.add_file_init(helper.construct_path(

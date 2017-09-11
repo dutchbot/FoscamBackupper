@@ -274,6 +274,7 @@ def get_args_obj():
     args["dry_run"] = True
     args["max_files"] = -1
     args["delete_local_f"] = False
+    args["mode"] = None
     args['conf'] = None
     return args
 

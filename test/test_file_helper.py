@@ -4,6 +4,7 @@ import foscambackup.file_helper as file_helper
 from mocks import mock_file_helper
 from io import StringIO
 
+#@unittest.SkipTest
 class TestFileHelper(unittest.TestCase):
 
     def setUp(self):

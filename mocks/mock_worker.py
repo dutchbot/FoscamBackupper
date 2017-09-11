@@ -5,8 +5,8 @@ from unittest.mock import call
 import helper
 
 def mlsd(*args, **kwargs):
-    yield (".", {'type':'folder'})
-    yield (Constant.sd_rec, {'type':'file'})
+    yield (".", {'type':'dir'})
+    yield (Constant.sd_rec, {'type':'dir'})
 
 def retrbinary_false(*args, **kwargs):
     file_handle = bytes(helper.get_current_date_offset_day()+"_100000",'ascii')

@@ -11,7 +11,7 @@ class CommandParser:
     def commandline_args():
         """ Commands and descriptions """
         parser = argparse.ArgumentParser(
-            description='Download and retrieve recordings and snapshots from foscam webcamera,' \
+            description='Download and retrieve recordings and snapshots from foscam webcamera,'
             'pass command line arguments for zipping and sorting.')
         parser.add_argument('-o', dest="output_path", action="store",
                             default="", help='The absolute directory to output the files to.')
@@ -25,6 +25,8 @@ class CommandParser:
                             help='Delete the local folder after zipping it.')
         parser.add_argument('--verbose', action="store",
                             dest="verbose", help='Output logging level with e,w,v')
+        parser.add_argument('-mode', action="store", dest="mode",
+                            default=None, help="Limit the mode to: 'record' or 'snap")
         parser.add_argument('--dry', action="store_true", dest="dry_run",
                             help='Do not delete local and remote folders')
         args = parser.parse_args()
