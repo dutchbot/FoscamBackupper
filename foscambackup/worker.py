@@ -52,10 +52,10 @@ class Worker:
 
     def check_currently_recording(self):
         """ Read the Sdrec file, which contains the current recording date """
-        dir_list = ftp_helper.mlsd(self.connection, helper.sl())
+        dir_list = ftp_helper.mlsd(self.connection, helper.sl() + Constant.base_folder)
         for directory, _ in dir_list:
             if directory == Constant.sd_rec:
-                ftp_helper.retr(self.connection, ftp_helper.create_retr(directory), self.read_sdrec_content)
+                ftp_helper.retr(self.connection, ftp_helper.create_retr(helper.sl() + Constant.base_folder + helper.sl() + directory), self.read_sdrec_content)
                 break
 
     def read_sdrec_content(self, file_handle):
@@ -75,9 +75,9 @@ class Worker:
         """ Get the files for both recorded an snapshot footage """
         self.check_currently_recording()
         mode_record = {"wanted_files": Constant.wanted_files_record,
-                "folder": Constant.record_folder, "int_mode": 0}
+                "folder": Constant.record_folder, "int_mode": 0 ,'separator':'_'}
         mode_snap = {"wanted_files": Constant.wanted_files_snap,
-                "folder": Constant.snap_folder, "int_mode": 1}
+                "folder": Constant.snap_folder, "int_mode": 1, 'separator':'-'}
         if self.args['mode'] != None:
             if self.args['mode'] == Constant.record_folder:
                 self.get_footage(mode_record)
@@ -169,7 +169,7 @@ class Worker:
                     with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
                         # scandir would provide more info
                         for filex in os.listdir(helper.construct_path(self.output_path, [folder])):
-                            self.log_debug(filex)
+                            self.log_debug("Adding to zip: " + filex)
                             myzip.write(helper.construct_path(
                                 folder_path, [filex]), arcname=filex)
                     myzip.close()
@@ -322,7 +322,7 @@ class Worker:
         self.log_debug(local_file_path)
         wrapper = None
         try:
-            helper.verify_path(loc_info['abs_path'])
+            helper.verify_path(loc_info['abs_path'], loc_info['mode'])
             wrapper = FileWrapper(local_file_path)
             call = wrapper.write_to_file
             ftp_helper.retr(self.connection, ftp_helper.create_retr(
@@ -337,6 +337,8 @@ class Worker:
             self.log_error(loc_info['abs_path'])
             self.log_error("Retrieve and write file: " +
                            loc_info['filename'] + " " + exc.__str__())
+        except ValueError as exc:
+            self.log_error(loc_info['abs_path'] + " : " + exc.__str__())
         finally:
             if wrapper != None:
                 wrapper.close_file()

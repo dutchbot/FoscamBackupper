@@ -38,18 +38,17 @@ def main():
         logger.addHandler(channel)
         args['conf'] = parser.read_conf()
         con = ftp_helper.open_connection(args['conf'])
-        worker = Worker(con, progress, args)
 
-        # Not ideal but we need to connect first to retrieve the model serial
         if args['conf'].model == "<model_serial>":
             args['conf'].write_model_to_conf(helper.retrieve_model_serial(con))
-            worker.update_conf(args['conf'])
 
+        worker = Worker(con, progress, args)
         worker.get_files()
     except KeyboardInterrupt:
         logger.info("Program stopped by user, bye :)")
     except socket.timeout as stime:
         logger.warning("Failed to connect to ftp server")
+        # 421 timeout?
         logger.debug(stime.__str__())
     except socket.error as serr:
         logger.warning("Failed to contact ftp server")

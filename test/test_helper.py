@@ -71,11 +71,19 @@ class TestHelper(unittest.TestCase):
         self.assertEqual(helper.clean_newline_char("test"), "test")
 
     def test_verify_path(self):
+        mode = {"separator":"-"}
         path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910-143000/testfile.avi"
-        self.assertEqual(helper.verify_path(path), True)
+        self.assertEqual(helper.verify_path(path, mode), True)
+        path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910-143000"
+        self.assertEqual(helper.verify_path(path, mode), True)
+        mode = {"separator":"_"}
+        path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910_143000/testfile.avi"
+        self.assertEqual(helper.verify_path(path, mode), True)
+        path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910_143000"
+        self.assertEqual(helper.verify_path(path, mode), True)
         with self.assertRaises(ValueError):
             path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910.av/testfile.avi"
-            helper.verify_path(path)
+            helper.verify_path(path, mode)
 
     def test_get_abs_path(self):
         mode = {"folder": "record"}

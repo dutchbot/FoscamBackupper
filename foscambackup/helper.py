@@ -60,10 +60,14 @@ def clean_newline_char(line):
         return line[:-1]
     return line
 
-def verify_path(path):
+def verify_path(path, mode):
     import re
-    p = re.compile('\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}\/')
-    if(p.match(path)):
+    regex = '\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}'
+    sep = mode['separator']
+    if sep == '_':
+        regex = regex[:-9] + regex[-9:].replace('-', sep, 1)
+    p = re.compile(regex)
+    if p.match(path):
         return True
     raise ValueError("Invalid constructed path!")
 
