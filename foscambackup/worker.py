@@ -201,7 +201,7 @@ class Worker:
                 file_list = ftp_helper.mlsd(self.connection, sub_path)
                 for filename, desc in file_list:
                     if desc['type'] != "dir":
-                        if filename != "." and filename != "..":
+                        if filename != "." and filename != "..": # should be cleared from the list
                             file_path = helper.construct_path(
                                 sub_path, [filename])
                             self.connection.delete(file_path)

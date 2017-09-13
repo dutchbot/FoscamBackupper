@@ -4,6 +4,11 @@ from ftplib import FTP
 from unittest.mock import call
 import helper
 
+def reset_mock():
+    conn.reset_mock()
+    conn.mlsd = umock.Mock(side_effect=mlsd, spec=str)
+    conn.retrbinary = umock.Mock(side_effect=retrbinary, spec=str)
+
 def mlsd(*args, **kwargs):
     yield (".", {'type':'dir'})
     yield (Constant.sd_rec, {'type':'dir'})

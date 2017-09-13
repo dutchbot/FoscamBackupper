@@ -1,7 +1,6 @@
 import os
 import unittest
 import unittest.mock as umock
-import zipfile
 from unittest.mock import call
 
 import helper
@@ -10,6 +9,7 @@ from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 from mocks import mock_worker
+from mocks import mock_ftp
 
 mode_record = {"wanted_files": Constant.wanted_files_record,
                "folder": Constant.record_folder, "int_mode": 0, 'separator': '_'}
@@ -20,7 +20,7 @@ mode_snap = {"wanted_files": Constant.wanted_files_snap,
 class TestWorker(unittest.TestCase):
 
     def setUp(self):
-        mock_worker.conn.reset_mock()
+        mock_worker.reset_mock()
         self.args = helper.get_args_obj()
         self.args['conf'] = Conf()
         self.progress = Progress()
@@ -28,7 +28,7 @@ class TestWorker(unittest.TestCase):
         #helper.log_to_stdout('Worker', 'info')
 
     def tearDown(self):
-        mock_worker.conn.reset_mock()
+        mock_worker.reset_mock()
 
     def init_worker(self, args):
         """ Supply different args """
@@ -70,7 +70,7 @@ class TestWorker(unittest.TestCase):
         mocked_footage = umock.MagicMock(side_effect=get_footage)
         check_done = umock.MagicMock(side_effect=check_done_folders)
 
-        mock_worker.conn.reset_mock()
+        # mock_worker.conn.reset_mock()
 
         with umock.patch('foscambackup.worker.Worker.get_footage', mocked_footage), \
                 umock.patch('foscambackup.worker.Worker.check_done_folders', check_done):
@@ -92,30 +92,7 @@ class TestWorker(unittest.TestCase):
         # done: assert number of files downloaded are correct.
         self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
 
-        def mlsd(*args, **kwargs):
-            if args[0] == "/":
-                yield (".", {'type': 'dir'})
-                yield (Constant.sd_rec, {'type': 'dir'})
-            else:
-                yield (".", {'type': 'dir'})
-                yield ("..", {'type': 'dir'})
-                if args[0] == "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap":
-                    yield ("20170101", {'type': 'dir'})
-                    yield ("20170102", {'type': 'dir'})
-                    yield ("20170103", {'type': 'dir'})
-                    yield ("20170104", {'type': 'dir'})
-                    yield (helper.get_current_date(), {'type': 'dir'})
-                if args[0].count(helper.sl()) == 5:
-                    dirname = args[0].split(helper.sl())[5]
-                    yield (dirname + ".jpg", {'type': 'file'})
-                elif args[0].count(helper.sl()) == 4:
-                    dirname = args[0].split(helper.sl())[4]
-                    yield (dirname + "-120000", {'type': 'dir'})
-                    yield (dirname + "-140000", {'type': 'dir'})
-                    yield (dirname + "-160000", {'type': 'dir'})
-                    yield (dirname + "-170000", {'type': 'dir'})
-
-        mock_worker.conn.mlsd.side_effect = mlsd
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
 
         def makedirs(path):
             return ""
@@ -285,18 +262,91 @@ class TestWorker(unittest.TestCase):
 
     #@unittest.SkipTest
     def test_recursive_delete(self):
-        # TODO
-        pass
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
+        mock_worker.conn.delete.side_effect = mock_ftp.delete
+        mock_worker.conn.rmd.side_effect = mock_ftp.rmd
+
+        self.worker.init_zip_folder(folder)
+        self.worker.recursive_delete(fullpath, folder)
+
+        top_subdirs = [call(fullpath),
+                       call(fullpath + '/20170101-120000'),
+                       call(fullpath + '/20170101-140000'),
+                       call(fullpath + '/20170101-160000'),
+                       call(fullpath + '/20170101-170000')]
+        delete_files = [call(fullpath + '/20170101-120000/20170101-120000.jpg'),
+                        call(fullpath + '/20170101-140000/20170101-140000.jpg'),
+                        call(fullpath + '/20170101-160000/20170101-160000.jpg'),
+                        call(fullpath + '/20170101-170000/20170101-170000.jpg')]
+
+        self.assertListEqual(mock_worker.conn.mlsd.call_args_list, top_subdirs)
+        self.assertListEqual(
+            mock_worker.conn.delete.call_args_list, delete_files)
+        deleted_dirs = top_subdirs
+        tmp = deleted_dirs[0]
+        deleted_dirs.remove(tmp)
+        deleted_dirs.append(tmp)
+        self.assertListEqual(
+            mock_worker.conn.rmd.call_args_list, deleted_dirs)
+        self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
     #@unittest.SkipTest
     def test_delete_remote_folder(self):
-        # TODO
-        pass
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+        self.worker.args['dry_run'] = 0
+        self.worker.args['delete_rm'] = 1
+
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
+        mock_worker.conn.delete.side_effect = mock_ftp.delete
+        mock_worker.conn.rmd.side_effect = mock_ftp.rmd_raise
+
+        delete_dirs = [
+            call(fullpath),
+            call(fullpath + '/20170101-120000'),
+            call(fullpath + '/20170101-140000'),
+            call(fullpath + '/20170101-160000'),
+            call(fullpath + '/20170101-170000'),
+            call(fullpath)]
+
+        delete_dir = [call(fullpath)]
+
+        self.worker.delete_remote_folder(fullpath, folder)
+        self.assertListEqual(mock_worker.conn.rmd.call_args_list,
+                             delete_dirs, msg="Recursive delete path")
+        # reset
+        self.worker.folder_actions[folder]['remote_deleted'] = 0
+        mock_worker.reset_mock()
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
+        mock_worker.conn.delete.side_effect = mock_ftp.delete
+        mock_worker.conn.rmd.side_effect = mock_ftp.rmd
+        self.worker.delete_remote_folder(fullpath, folder)
+        self.assertListEqual(mock_worker.conn.rmd.call_args_list,
+                             delete_dir, msg="Normal delete path")
+        self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
     #@unittest.SkipTest
     def test_check_done_folders(self):
-        # TODO
-        pass
+        def check_folders_done():
+            return ['record/20170101', 'snap/20170101']
+
+        def generic(folder):
+            pass
+        init_zip = umock.Mock(side_effect=generic)
+        zip_and_delete = umock.Mock(side_effect=generic)
+        check_folders = umock.Mock(side_effect=check_folders_done)
+        with umock.patch("foscambackup.progress.Progress.check_folders_done", check_folders), \
+                umock.patch("foscambackup.worker.Worker.init_zip_folder", init_zip), \
+                umock.patch("foscambackup.worker.Worker.zip_and_delete", zip_and_delete):
+            self.worker.check_done_folders()
+
+        verify = [call('snap/20170101'), call('record/20170101')]
+        self.assertListEqual(check_folders.call_args_list, [call()])
+        self.assertListEqual(init_zip.call_args_list, verify)
+        self.assertListEqual(zip_and_delete.call_args_list, verify)
 
     #@unittest.SkipTest
     def test_zip_and_delete(self):
