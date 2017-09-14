@@ -105,6 +105,7 @@ class Worker:
                 if self.progress.check_done_folder(mode["folder"], pdir) is False:
                     self.progress.cur_folder = mode["folder"] + \
                         helper.sl() + pdir
+                    self.init_zip_folder(self.progress.cur_folder)
                     path = helper.construct_path(
                         helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
@@ -233,7 +234,6 @@ class Worker:
         except KeyError:
             self.log_error(
                 "Folder key was not initialized in zipped folders list!")
-            self.init_zip_folder(folder)
             self.delete_remote_folder(fullpath, folder)
 
     def check_done_folders(self):
@@ -246,7 +246,6 @@ class Worker:
         for folder in done_folders:
             count += 1
             self.log_debug(count)
-            self.init_zip_folder(folder)
             self.zip_and_delete(folder)
 
     def zip_and_delete(self, folder):
@@ -262,12 +261,15 @@ class Worker:
         delete_state = {'action_key': 'local_deleted',
                         'arg_key': 'delete_local_f', 'folder': folder, 'fullpath': fullpath}
         self.check_folder_state_delete(delete_state, self.delete_local_folder)
-        fullpath = helper.construct_path(self.conf.model, [folder])
-        fullpath = helper.construct_path(
-            helper.sl() + Constant.base_folder, [fullpath])
-        delete_state = {'action_key': 'remote_deleted',
-                        'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
-        self.check_folder_state_delete(delete_state, self.delete_remote_folder)
+        if self.conf.model:
+            fullpath = helper.construct_path(self.conf.model, [folder])
+            fullpath = helper.construct_path(
+                helper.sl() + Constant.base_folder, [fullpath])
+            delete_state = {'action_key': 'remote_deleted',
+                            'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
+            self.check_folder_state_delete(delete_state, self.delete_remote_folder)
+        else:
+            raise ValueError("No conf.model value!")
 
     def check_folder_state_delete(self, delete_state, callback):
         """ Remote and local deletion of folder """
@@ -300,7 +302,6 @@ class Worker:
         filename = loc_info['filename']
         folderpath = helper.clean_folder_path(
             helper.construct_path(m_folder, [loc_info['parent_dir']]))
-        self.init_zip_folder(folderpath)
         if loc_info['desc']['type'] == 'file':
             check = filename.split(".")
             if len(check) > 1:
@@ -323,7 +324,8 @@ class Worker:
         wrapper = None
         try:
             helper.verify_path(loc_info['abs_path'], loc_info['mode'])
-            wrapper = FileWrapper(local_file_path)
+            byte_size = ftp_helper.size(self.connection, loc_info['abs_path'])
+            wrapper = FileWrapper(local_file_path, byte_size)
             call = wrapper.write_to_file
             ftp_helper.retr(self.connection, ftp_helper.create_retr(
                 loc_info['abs_path']), call)

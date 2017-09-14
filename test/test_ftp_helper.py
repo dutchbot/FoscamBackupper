@@ -85,3 +85,14 @@ class TestFtpHelper(unittest.TestCase):
         self.assertEqual(ftp_helper.create_retr(query), "RETR "+query)
         with self.assertRaises(ValueError):
             ftp_helper.create_retr("/IPCamera/record")
+
+    def test_size(self):
+        """ Verify we go to Binary, retrieve size and go back to ASCII """
+        def generic(value):
+            pass
+        conn.sendcmd = umock.MagicMock(side_effect=generic)
+        conn.size = umock.MagicMock(side_effect=generic)
+        ftp_helper.size(conn, 'IPCamera/record/test')
+
+        self.assertListEqual(conn.sendcmd.call_args_list, [call('TYPE i'),call('TYPE A')])
+        self.assertListEqual(conn.size.call_args_list, [call('IPCamera/record/test')])

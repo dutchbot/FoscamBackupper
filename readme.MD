@@ -23,10 +23,9 @@ model_serial:<model_serial>
 Note that the model_serial can be left as it is, the code will try to retrieve it from the ftp server.
 
 # Roadmap
-1. Add option to select single mode from commandline (snap/record). 
+1. Show zipping / deletion progress.
 2. Add threading for zipping locally and downloading.
-3. Show download progress (we probably need to parse file descriptions)
-4. Add option to store file sizes and compare to disk stored to determine state of file.
+3. Add option to store file sizes and compare to disk stored to determine state of file.
 
 # Building for Windows
 ```

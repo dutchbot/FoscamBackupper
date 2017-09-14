@@ -52,3 +52,11 @@ def create_retr(path):
     if "." in path: # Really basic check for file ext
         return "RETR " + path
     raise ValueError("Malformed path, missing file ext?")
+
+def size(con, path):
+    """ Return the file size at abs path """
+    result = con.sendcmd("TYPE i")
+    f_size = con.size(path)
+    result = con.sendcmd("TYPE A")
+    return f_size
+

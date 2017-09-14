@@ -19,6 +19,8 @@ mode_snap = {"wanted_files": Constant.wanted_files_snap,
 
 class TestWorker(unittest.TestCase):
 
+    FAKE_MODEL = "FXXXXX_CEEEEEEEEEEE"
+
     def setUp(self):
         mock_worker.reset_mock()
         self.args = helper.get_args_obj()
@@ -314,6 +316,7 @@ class TestWorker(unittest.TestCase):
 
         delete_dir = [call(fullpath)]
 
+        self.worker.init_zip_folder(folder)
         self.worker.delete_remote_folder(fullpath, folder)
         self.assertListEqual(mock_worker.conn.rmd.call_args_list,
                              delete_dirs, msg="Recursive delete path")
@@ -331,7 +334,10 @@ class TestWorker(unittest.TestCase):
     #@unittest.SkipTest
     def test_check_done_folders(self):
         def check_folders_done():
-            return ['record/20170101', 'snap/20170101']
+            folders_done = ['snap/20170101', 'record/20170101']
+            for folder in folders_done:
+                self.worker.init_zip_folder(folder)
+            return folders_done
 
         def generic(folder):
             pass
@@ -350,30 +356,72 @@ class TestWorker(unittest.TestCase):
 
     #@unittest.SkipTest
     def test_zip_and_delete(self):
-        # TODO
-        pass
+        """ Verify the logic, actual deletion and zipping should be tested already. """
+        def clean_folder(folder):
+            return folder
 
-    #@unittest.SkipTest
+        def delete(state, callback):
+            pass
+        folder = "record/20170101"
+        clean = umock.Mock(side_effect=clean_folder)
+        delete = umock.Mock(side_effect=delete)
+        verify_delete = [call({'action_key': 'local_deleted', 'arg_key': 'delete_local_f', 'folder': 'record/20170101', 'fullpath': '/record/20170101'}, self.worker.delete_local_folder),
+                         call({'action_key': 'remote_deleted', 'arg_key': 'delete_rm', 'folder': 'record/20170101', 'fullpath': '/IPCamera/FXXXXX_CEEEEEEEEEEE/record/20170101'}, self.worker.delete_remote_folder)]
+        with umock.patch("foscambackup.helper.clean_folder_path", clean), \
+                umock.patch("foscambackup.worker.Worker.check_folder_state_delete", delete):
+            self.worker.init_zip_folder(folder)
+            with self.assertRaises(ValueError):
+                self.worker.zip_and_delete(folder)
+            clean.reset_mock(side_effect=False)
+            delete.reset_mock(side_effect=False)
+            self.worker.conf.model = self.FAKE_MODEL
+            self.worker.zip_and_delete(folder)
+            self.assertListEqual(clean.call_args_list, [call(folder)])
+            self.assertListEqual(delete.call_args_list, verify_delete)
+
+    # #@unittest.SkipTest
     def test_check_folder_state_delete(self):
-        # TODO
-        pass
+        def delete_method(fullpath, folder):
+            self.worker.set_remote_deleted(folder)
+            pass
+        folder = "record/20170101"
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        delete_state = {'action_key': 'remote_deleted', 'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
+        callback = umock.MagicMock(side_effect=delete_method)
+        self.args['dry_run'] = True
+        self.args['delete_rm'] = True
+        self.worker.init_zip_folder(folder)
+        self.worker.check_folder_state_delete(delete_state, callback)
+        self.assertListEqual(callback.call_args_list, [])
+        self.assertTrue(self.worker.get_remote_deleted(folder), 1)
+
+        # non dry run code path
+        self.worker.args['dry_run'] = False
+        self.worker.folder_actions[folder]['remote_deleted'] = 0
+        self.worker.check_folder_state_delete(delete_state, callback)
+        self.assertListEqual(callback.call_args_list, [call('/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101', 'record/20170101')])
+        self.assertTrue(self.worker.get_remote_deleted(folder), 1)
 
     #@unittest.SkipTest
     def test_crawl_folder(self):
-        # TODO
+        # count recursion and calls to craw_files.
         pass
 
     #@unittest.SkipTest
     def test_crawl_files(self):
-        # TODO
+        # check call to previous_progress
+        # check call to not_dat_file
+        # check call to add_file_init and retrieve_and_write_file
         pass
 
     #@unittest.SkipTest
     def test_retrieve_and_write_file(self):
-        # TODO
+        # check call to download_file
+        # check call to add_file_done
         pass
 
     #@unittest.SkipTest
     def test_download_file(self):
-        # TODO
+        # call to verify path
+        # call to ftp_helper.retr
         pass
