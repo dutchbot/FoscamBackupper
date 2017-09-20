@@ -39,4 +39,22 @@ def mlsd(*args, **kwargs):
             yield (dirname + "-140000", {'type': 'dir'})
             yield (dirname + "-160000", {'type': 'dir'})
             yield (dirname + "-170000", {'type': 'dir'})
+
+def mlsd2(*args, **kwargs):
+    """ No dot folders """
+    if args[0] == "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap":
+        yield ("20170101", {'type': 'dir'})
+        yield ("20170102", {'type': 'dir'})
+        yield ("20170103", {'type': 'dir'})
+        yield ("20170104", {'type': 'dir'})
+        yield (helper.get_current_date(), {'type': 'dir'})
+    if args[0].count(helper.sl()) == 5:
+        dirname = args[0].split(helper.sl())[5]
+        yield (dirname + ".jpg", {'type': 'file'})
+    elif args[0].count(helper.sl()) == 4:
+        dirname = args[0].split(helper.sl())[4]
+        yield (dirname + "-120000", {'type': 'dir'})
+        yield (dirname + "-140000", {'type': 'dir'})
+        yield (dirname + "-160000", {'type': 'dir'})
+        yield (dirname + "-170000", {'type': 'dir'})
     

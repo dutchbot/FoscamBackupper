@@ -8,6 +8,7 @@ TestIntegrationWorker.output_path = "D:/output-test/integration"
 from test_helper import TestHelper
 from test_ftp_helper import TestFtpHelper
 from test_file_helper import TestFileHelper
+from test_file_wrapper import TestFileWrapper
 from test_worker import TestWorker
 TestWorker.output_path = "D:/output-test/worker"
 from test_progress import TestProgress

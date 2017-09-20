@@ -93,7 +93,7 @@ class Progress:
 
     def add_file_done(self, folderpath, filename):
         """ Add file to done list """
-        self.logger.info("Adding file to DONE " + filename)
+        self.logger.debug("Adding file to DONE " + filename)
         try:
             self.done_progress[folderpath][filename] = 1
             self.done_files += 1

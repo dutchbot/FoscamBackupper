@@ -386,7 +386,8 @@ class TestWorker(unittest.TestCase):
             pass
         folder = "record/20170101"
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
-        delete_state = {'action_key': 'remote_deleted', 'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
+        delete_state = {'action_key': 'remote_deleted',
+                        'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
         callback = umock.MagicMock(side_effect=delete_method)
         self.args['dry_run'] = True
         self.args['delete_rm'] = True
@@ -399,13 +400,46 @@ class TestWorker(unittest.TestCase):
         self.worker.args['dry_run'] = False
         self.worker.folder_actions[folder]['remote_deleted'] = 0
         self.worker.check_folder_state_delete(delete_state, callback)
-        self.assertListEqual(callback.call_args_list, [call('/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101', 'record/20170101')])
+        self.assertListEqual(callback.call_args_list, [call(
+            '/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101', 'record/20170101')])
         self.assertTrue(self.worker.get_remote_deleted(folder), 1)
 
     #@unittest.SkipTest
     def test_crawl_folder(self):
         # count recursion and calls to craw_files.
-        pass
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd2
+        self.worker.conf.model = "FXXXXX_CEEEEEEEEEEE"
+        parent = "20170101"
+        parent_path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        file_list = mock_worker.conn.mlsd(
+            "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101")
+
+        def permit(arg):
+            pass
+
+        crawl = umock.MagicMock(side_effect=permit)
+
+        with umock.patch("foscambackup.worker.Worker.crawl_files", crawl):
+            self.worker.crawl_folder(file_list, mode_snap, parent)
+
+        file_list = ['20170101-120000.jpg', '20170101-140000.jpg',
+                     '20170101-160000.jpg', '20170101-170000.jpg']
+        verify_list = []
+        for filename in file_list:
+            subfolder = filename
+            _type = "dir"
+            if len(filename) > 2:
+                subfolder = filename[:-4]
+                _type = 'file'
+            verify_list.append(call({
+                'mode': mode_snap,
+                'parent_dir': '20170101',
+                'abs_path': parent_path + "/" + subfolder + "/" + filename,
+                'filename': filename,
+                'desc': {'type': _type}}))
+
+        self.assertListEqual(crawl.call_args_list, verify_list,
+                             msg="Failed to verify the calls")
 
     #@unittest.SkipTest
     def test_crawl_files(self):

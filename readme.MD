@@ -23,9 +23,10 @@ model_serial:<model_serial>
 Note that the model_serial can be left as it is, the code will try to retrieve it from the ftp server.
 
 # Roadmap
-1. Show zipping / deletion progress.
-2. Add threading for zipping locally and downloading.
-3. Add option to store file sizes and compare to disk stored to determine state of file.
+1. Fix state overall, not just for the last folder. 
+2. Show zipping / deletion progress.
+3. Add threading for zipping locally and downloading.
+4. Add option to store file sizes and compare to disk stored to determine state of file.
 
 # Building for Windows
 ```
