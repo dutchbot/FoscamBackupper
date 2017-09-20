@@ -1,3 +1,4 @@
+""" Main function for running the program """
 import sys
 import socket
 import logging
@@ -5,69 +6,61 @@ import traceback
 import argparse
 
 # own classes
-from progress import Progress
-from command_parser import CommandParser
-from worker import Worker
-from constant import Constant
-
-progress = None
-connection = None
-logger = None
+from foscambackup.progress import Progress
+from foscambackup.command_parser import CommandParser
+from foscambackup.worker import Worker
+from foscambackup.constant import Constant
+import foscambackup.ftp_helper as ftp_helper
 
 def main():
+    """ Main """
+    progress = None
+    logger = None
+    con = None
     try:
-        global progress
-        global logger
         parser = CommandParser()
+        progress = Progress()
         args = parser.commandline_args()
-        if(isinstance(args.__class__, type(argparse.ArgumentParser))):
+        if isinstance(args.__class__, type(argparse.ArgumentParser)):
             args = args.__dict__
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler(sys.stdout)
-        if args["verbose"]:
-            ch.setLevel(logging.INFO)
-        else:
-            ch.setLevel(logging.WARNING)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-        progress = Progress()
-        worker = Worker(progress,args)
-        conf = parser.read_conf()
-        con = worker.open_connection(conf)
+        channel = logging.StreamHandler(sys.stdout)
+        if args["verbose"] == 'i':
+            channel.setLevel(logging.INFO)
+        elif args["verbose"] == 'w':
+            channel.setLevel(logging.WARNING)
+        elif args["verbose"] == 'd':
+            channel.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        channel.setFormatter(formatter)
+        logger.addHandler(channel)
+        args['conf'] = parser.read_conf()
+        con = ftp_helper.open_connection(args['conf'])
 
-        if conf.model == "<model_serial>":
-            conf.write_model_to_conf(retrieve_model_serial(con))
-            worker.update_conf(conf)
+        if args['conf'].model == "<model_serial>":
+            args['conf'].write_model_to_conf(helper.retrieve_model_serial(con))
 
-        worker.get_files(con)
+        worker = Worker(con, progress, args)
+        worker.get_files()
     except KeyboardInterrupt:
         logger.info("Program stopped by user, bye :)")
-        save_progress_exit()
-    except socket.timeout:
+    except socket.timeout as stime:
         logger.warning("Failed to connect to ftp server")
-        sys.exit()
-    except socket.error:
+        # 421 timeout?
+        logger.debug(stime.__str__())
+    except socket.error as serr:
         logger.warning("Failed to contact ftp server")
-        sys.exit()
-    except Exception as t:
+        logger.debug(serr.__str__())
+    except Exception:
         traceback.print_exc()
-        save_progress_exit()
-
-def save_progress_exit():
-    if(progress.get_cur_folder() != ''):
-        logger.debug("Saving progress..")
-        progress.save_progress_for_unfinished(progress.current_mode+"/"+progress.get_cur_folder())
-    sys.exit()
-
-def retrieve_model_serial(connection):
-    base = "CWD "+"/"+Constant.f_folder
-    connection.sendcmd(base)
-    dir_list = connection.mlsd()
-    for dir,detail in dir_list:
-        if not "." in dir:
-            return dir
+    finally:
+        if con != None:
+            ftp_helper.close_connection(con)
+        if progress != None:
+            progress.save()
+        sys.exit()
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,2 @@
+pyftpdlib==1.5.2
+progressbar2==3.34.2

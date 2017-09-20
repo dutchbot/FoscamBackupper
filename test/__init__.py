@@ -1,0 +1,1 @@
+# NOTE: module name mock gives problems with travis-ci so renamed to mocks.
