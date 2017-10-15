@@ -33,8 +33,6 @@ def check_not_curup(foldername):
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
     splitted = folder.split(sl())
-    # if "-" in folder: #failsafe
-    #     return folder[:-16]
     if len(splitted) == 3:
         return construct_path(splitted[0], [splitted[1]])
     return folder

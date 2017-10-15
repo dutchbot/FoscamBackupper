@@ -285,11 +285,12 @@ class Worker:
                 self.log_debug("Deleted " + action_key + ": " + folder)
 
     def crawl_files(self, loc_info):
+        """ Verify that we did not downloade before and filetype is valid, then download """
         if self.progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info['parent_dir'], loc_info['filename']):
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))
-        """ Process the actual files """
+        # Process the actual files
         if helper.check_not_dat_file(loc_info['filename']):
             self.progress.add_file_init(helper.construct_path(
                 loc_info['mode']["folder"], [loc_info['parent_dir']]), loc_info['filename'])
@@ -331,8 +332,6 @@ class Worker:
                 loc_info['abs_path']), call)
             self.log_info("Downloading... " + loc_info['filename'])
         except error_perm as exc:
-            # #self.log_error("Current remote dir: " +
-            #                str(list(connection.mlsd("."))))
             self.log_error("Tried path: " + loc_info['abs_path'])
             self.log_error("Tried path: " +
                            str(list(ftp_helper.mlsd(self.connection, loc_info['abs_path']))))

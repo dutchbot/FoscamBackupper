@@ -137,6 +137,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(APPEND.buffer, folder+"\n")
 
     def test_write_done_folder(self):
+        """ write folder to state.log """
         foldername = "record/20160501"
         folder = {foldername: {"done":1, "path":foldername}}
         self.progress.done_progress[folder[foldername]['path']] = folder[foldername]
@@ -146,6 +147,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.complete_folders, [folder[foldername]['path']])
 
     def test_save(self):
+        """ save progress """
         with self.assertRaises(ValueError):
             self.progress.save()
         folder = "record/20160501"
@@ -174,6 +176,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(WRITE.buffer, args['enc'])
 
     def test_read_processed_folder(self):
+        """ read progress """
         folder = "record/20160501"
         self.progress.done_progress[folder] = self.progress.init_empty(folder)
         self.progress.done_progress[folder]['20160501_220030.avi'] = 1
@@ -187,7 +190,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
 
     def test_save_progress_for_unfinished(self):
-        """ FIXME Key error present """
+        """ save progress """
         folder = "record/20160501"
         folders = {}
         folders[folder] = self.progress.init_empty(folder)

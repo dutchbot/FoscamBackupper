@@ -46,7 +46,6 @@ class Progress:
             self.initialize_done_progress(cleaned, done)
             self.done_folders.append(cleaned)
 
-    # opens file line cleans it, writes initialize, appends to done_folders
     def read_state_file(self):
         """ Read from state file """
         try:
@@ -67,7 +66,7 @@ class Progress:
     def check_done_folder(self, mode, foldername):
         """ Check if folder was already done """
         self.logger.debug("Mode " + mode + " " + foldername)
-        # check all the files for 1 value
+        # TODO improvement verify the folder files are set to 1's
         for folder in self.done_folders:
             if folder == helper.construct_path(mode, [foldername]):
                 return True
@@ -120,7 +119,6 @@ class Progress:
 
     def compare_files_done(self, folder):
         """ Folder must be a list """
-        # we get a dict with 2 keys that say nothing about the folder
         number_of_files = len(folder.keys()) - 2
         actual_done = 0
         for key, value in folder.items():
@@ -178,7 +176,6 @@ class Progress:
             self.logger.debug(ex.__str__())
             return None
 
-    # save the progress of the last folder
     def save_progress_for_unfinished(self, folder):
         """ Save the progress for unfinished task """
         last_file = self.read_last_processed_folder(folder)
