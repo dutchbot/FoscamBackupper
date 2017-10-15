@@ -175,13 +175,11 @@ class TestProgress(unittest.TestCase):
 
     def test_read_processed_folder(self):
         folder = "record/20160501"
-        folders = {}
-        folders[folder] = self.progress.init_empty(folder)
-        folders[folder]['20160501_220030.avi'] = 1
-        folders[folder]['20160501_230030.avi'] = 1
-        folders[folder]['20160501_150030.avi'] = 0
-        self.progress.done_progress = folders
-        self.assertDictEqual(self.progress.read_last_processed_folder(folder), folders[folder])
+        self.progress.done_progress[folder] = self.progress.init_empty(folder)
+        self.progress.done_progress[folder]['20160501_220030.avi'] = 1
+        self.progress.done_progress[folder]['20160501_230030.avi'] = 1
+        self.progress.done_progress[folder]['20160501_150030.avi'] = 0
+        self.assertDictEqual(self.progress.read_last_processed_folder(folder), self.progress.done_progress[folder])
         self.progress.done_folders.append(folder)
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
         self.progress.done_folders = []
@@ -189,6 +187,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
 
     def test_save_progress_for_unfinished(self):
+        """ FIXME Key error present """
         folder = "record/20160501"
         folders = {}
         folders[folder] = self.progress.init_empty(folder)
@@ -204,7 +203,7 @@ class TestProgress(unittest.TestCase):
 
         with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
             result = self.progress.save_progress_for_unfinished(folder)
-        self.assertEqual(result, False)
+            self.assertEqual(result, False)
 
         self.progress.done_progress = folders
         with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):

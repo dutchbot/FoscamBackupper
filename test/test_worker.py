@@ -10,6 +10,7 @@ from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 from mocks import mock_worker
 from mocks import mock_ftp
+from mocks import mock_file_helper
 
 mode_record = {"wanted_files": Constant.wanted_files_record,
                "folder": Constant.record_folder, "int_mode": 0, 'separator': '_'}
@@ -83,7 +84,6 @@ class TestWorker(unittest.TestCase):
 
         self.assertDictEqual(result[0], mode_record)
         self.assertDictEqual(result[1], mode_snap)
-        self.assertEqual(check_done.called, True, "Called check_done_folders")
         self.assertListEqual(mock_worker.conn.method_calls,
                              calls, "Called check_currently_recording")
 
@@ -112,7 +112,8 @@ class TestWorker(unittest.TestCase):
         osmakedirs.makedirs = umock.MagicMock(side_effect=download_file)
 
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
-                umock.patch("os.makedirs", osmakedirs):
+                umock.patch("os.makedirs", osmakedirs), \
+                umock.patch("foscambackup.file_helper.open_appendonly_file", mock_file_helper.APPEND):
             # RECORDING
             file_handle = bytes(
                 helper.get_current_date_time_rounded(), 'ascii')
@@ -379,7 +380,7 @@ class TestWorker(unittest.TestCase):
             self.assertListEqual(clean.call_args_list, [call(folder)])
             self.assertListEqual(delete.call_args_list, verify_delete)
 
-    # #@unittest.SkipTest
+    #@unittest.SkipTest
     def test_check_folder_state_delete(self):
         def delete_method(fullpath, folder):
             self.worker.set_remote_deleted(folder)

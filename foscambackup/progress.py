@@ -174,10 +174,8 @@ class Progress:
                     return None
             last_file = self.done_progress[folder]
             return last_file
-        except KeyError:
-            self.logger.error("Key: " + folder)
-            self.logger.error("Key error in save_progress_for_unfinished")
-            self.logger.error(self.done_progress)
+        except KeyError as ex:
+            self.logger.debug(ex.__str__())
             return None
 
     # save the progress of the last folder

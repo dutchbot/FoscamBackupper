@@ -86,7 +86,6 @@ class Worker:
         else:
             self.get_footage(mode_record)
             self.get_footage(mode_snap)
-        self.check_done_folders()
         self.log_info("finished downloading files")
 
     def get_footage(self, mode):
@@ -110,6 +109,7 @@ class Worker:
                         helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, pdir)
+                    self.check_done_folders()
                 else:
                     self.log_info("skipping folder because already done")
 
