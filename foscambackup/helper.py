@@ -59,13 +59,14 @@ def clean_newline_char(line):
     return line
 
 def verify_path(path, mode):
+    """ Verify we constructed a valid remote path """
     import re
     regex = '\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}'
     sep = mode['separator']
     if sep == '_':
         regex = regex[:-9] + regex[-9:].replace('-', sep, 1)
-    p = re.compile(regex)
-    if p.match(path):
+    pattern = re.compile(regex)
+    if pattern.match(path):
         return True
     raise ValueError("Invalid constructed path!")
 
@@ -98,6 +99,7 @@ def check_valid_folderkey(folder):
     raise ValueError("Foldername truncated!")
 
 def not_check_subdir(subdir, foldername):
+    """ Verify our current folder is not a subdirectory """
     if subdir:
         return not foldername in subdir['subdirs']
     return True

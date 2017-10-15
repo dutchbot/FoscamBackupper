@@ -127,7 +127,7 @@ class TestProgress(unittest.TestCase):
         with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
             self.assertListEqual(self.progress.check_folders_done(), [folder])
 
-    def test_write_done_folder_to_newline(self):
+    def test_write_to_newline(self):
         folder = "record/20160501"
         args = {"path": folder}
 
