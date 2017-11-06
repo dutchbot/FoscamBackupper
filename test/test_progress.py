@@ -4,6 +4,7 @@ import unittest
 import unittest.mock as umock
 from io import StringIO
 
+import helper as test_helper
 import foscambackup.helper as helper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
@@ -19,7 +20,8 @@ WRITE = mock_file_helper.WRITE
 class TestProgress(unittest.TestCase):
     
     def setUp(self):
-        self.progress = Progress(True)
+        self.progress = Progress("")
+        #test_helper.log_to_stdout('Worker','info')
 
     def tearDown(self):
         APPEND.buffer = ""
@@ -38,15 +40,15 @@ class TestProgress(unittest.TestCase):
         pass
 
     @umock.patch('builtins.open', READ_S)
-    def test_load_and_init_done_folders(self):
+    def test_load_and_init_complete_folders(self):
         read_file = READ_S.read()
         path = 'record/20160501'
-        self.progress.load_and_init_done_folders(read_file)
-        self.assertListEqual(self.progress.done_folders, [path])
+        self.progress.load_and_init_complete_folders(read_file)
+        self.assertListEqual(self.progress.complete_folders, [path])
         self.assertDictEqual(self.progress.done_progress[path], {"done":1, "path":"record/20160501"})
         
     def test_read_state_file(self):
-        """ Tested by test_load_and_init_done_folders """
+        """ Tested by test_load_and_init_complete_folders """
         pass
 
     def test_check_for_previous_progress(self):
@@ -60,7 +62,7 @@ class TestProgress(unittest.TestCase):
 
     def test_check_done_folder(self):
         path = 'record/20160501'
-        self.progress.done_folders.append(path)
+        self.progress.complete_folders.append(path)
         self.assertEqual(self.progress.check_done_folder("record", "20160501"), True)
         self.assertEqual(self.progress.check_done_folder("record", "20160502"), False)
 
@@ -146,6 +148,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.complete_folders, [folder[foldername]['path']])
 
     def test_save(self):
+        """ Test saving of state file """
         with self.assertRaises(ValueError):
             self.progress.save()
         folder = "record/20160501"
@@ -156,6 +159,8 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_150030.avi'] = 0
         self.progress.done_progress = folders
         self.progress.cur_folder = folder
+        print("WTFF")
+        print(self.progress.cur_folder)
         with umock.patch('builtins.open', APPEND):
             self.assertEqual(self.progress.save(), True)
 
@@ -182,9 +187,9 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_150030.avi'] = 0
         self.progress.done_progress = folders
         self.assertDictEqual(self.progress.read_last_processed_folder(folder), folders[folder])
-        self.progress.done_folders.append(folder)
+        self.progress.complete_folders.append(folder)
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
-        self.progress.done_folders = []
+        self.progress.complete_folders = []
         self.progress.done_progress = {}
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
 

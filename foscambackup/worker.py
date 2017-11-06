@@ -4,13 +4,14 @@ import sys
 import logging
 import threading
 
-from ftplib import error_perm
+import ftplib
 from zipfile import ZipFile
 from zipfile import ZIP_LZMA
 
 # own classes
 from foscambackup.file_wrapper import FileWrapper
 from foscambackup.constant import Constant
+from foscambackup.progress import Progress
 import foscambackup.helper as helper
 import foscambackup.ftp_helper as ftp_helper
 
@@ -32,16 +33,17 @@ class Worker:
         """ Log error msg """
         self.logger.error(msg)
 
-    def __init__(self, connection, progress, args):
+    def __init__(self, connection, args):
         """ Set and initialize all the variables for later use.
             Note: Hard to test this way, needs rewrite.
         """
         self.connection = connection
-        self.progress = progress
+        self.progress_objects = []
         self.args = args
         self.conf = args['conf']
         self.folder_actions = {}
-        self.progress.max_files = args["max_files"]
+        # Static
+        Progress.max_files = args["max_files"]
         if args["output_path"][-1:] == "":
             self.log_debug("Using current dir")
             self.output_path = ""
@@ -86,7 +88,6 @@ class Worker:
         else:
             self.get_footage(mode_record)
             self.get_footage(mode_snap)
-        self.check_done_folders()
         self.log_info("finished downloading files")
 
     def get_footage(self, mode):
@@ -102,24 +103,24 @@ class Worker:
                             "Skipping current recording folder: " + pdir)
                         continue
                 self.log_debug(pdir)
-                if self.progress.check_done_folder(mode["folder"], pdir) is False:
-                    self.progress.cur_folder = mode["folder"] + \
-                        helper.sl() + pdir
-                    self.init_zip_folder(self.progress.cur_folder)
+                progress = Progress(mode["folder"] + helper.sl() + pdir)
+                self.progress_objects.append(progress)
+                if progress.check_done_folder(mode["folder"], pdir) is False:
+                    self.init_zip_folder(progress.cur_folder)
                     path = helper.construct_path(
                         helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
-                    self.crawl_folder(val, mode, pdir)
+                    self.crawl_folder(val, mode, progress, pdir)
                 else:
                     self.log_info("skipping folder because already done")
 
-    def crawl_folder(self, file_list, mode, parent, subdir=None):
+    def crawl_folder(self, file_list, mode, progress, parent, subdir=None):
         """ Find the files to download in their respective directories """
         self.log_debug("Found subdirs: "+ str(file_list))
         for foldername, desc in file_list:
             # do not add the time period folders
-            if self.progress.is_max_files_reached() is True:
-                self.progress.save_progress()
+            if progress.is_max_files_reached() is True:
+                progress.save_progress()
                 sys.exit()
 
             if helper.not_check_subdir(subdir, foldername) is False:
@@ -141,12 +142,12 @@ class Worker:
                 if subdir:
                     subdir['subdirs'].append(foldername)
                     subdir['current'] = foldername
-                self.crawl_folder(file_list_subdir, mode, parent, subdir)
+                self.crawl_folder(file_list_subdir, mode, progress, parent, subdir)
             else:
                 abs_path = helper.construct_path(subdir['path'], [foldername])
                 loc_info = {'mode': mode, 'parent_dir': parent, 'abs_path': abs_path,
                             'filename': foldername, 'desc': desc}
-                self.crawl_files(loc_info)
+                self.crawl_files(loc_info, progress)
 
     def init_zip_folder(self, key):
         """ Initialize the key for folder with dict object """
@@ -212,8 +213,10 @@ class Worker:
             self.log_debug("Deleting top folder")
             self.connection.rmd(fullpath)
             self.set_remote_deleted(folder)
-        except error_perm:
+        except ftplib.error_perm:
             self.log_error("No such file or directory! Tried: " + fullpath)
+        except ftplib.error_temp:
+            self.log_info("Timeout when deleting..")
 
     def delete_remote_folder(self, fullpath, folder):
         """ Used to delete the remote folder, also deletes recursively """
@@ -225,7 +228,7 @@ class Worker:
                         self.log_info(fullpath)
                         self.connection.rmd(fullpath)
                         self.set_remote_deleted(folder)
-                    except error_perm as perm:
+                    except ftplib.error_perm as perm:
                         if "550" in perm.__str__():
                             self.recursive_delete(fullpath, folder)
                 else:
@@ -236,10 +239,10 @@ class Worker:
                 "Folder key was not initialized in zipped folders list!")
             self.delete_remote_folder(fullpath, folder)
 
-    def check_done_folders(self):
+    def check_done_folders(self, progress):
         """ Check which folders are marked as done and process them for deletion and/or zipping """
         self.log_debug("Check done folders")
-        done_folders = sorted(self.progress.check_folders_done(), reverse=True)
+        done_folders = sorted(progress.check_folders_done(), reverse=True)
         self.log_debug(done_folders)
         self.log_debug(self.folder_actions)
         count = 0
@@ -284,18 +287,19 @@ class Worker:
                 self.folder_actions[folder][action_key] = 1
                 self.log_debug("Deleted " + action_key + ": " + folder)
 
-    def crawl_files(self, loc_info):
-        if self.progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info['parent_dir'], loc_info['filename']):
+    def crawl_files(self, loc_info, progress):
+        """ Check if not already downloaded and valid filename, then download the file to our local path """
+        if progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info['parent_dir'], loc_info['filename']):
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))
         """ Process the actual files """
         if helper.check_not_dat_file(loc_info['filename']):
-            self.progress.add_file_init(helper.construct_path(
+            progress.add_file_init(helper.construct_path(
                 loc_info['mode']["folder"], [loc_info['parent_dir']]), loc_info['filename'])
-            self.retrieve_and_write_file(loc_info)
+            self.retrieve_and_write_file(loc_info, progress)
 
-    def retrieve_and_write_file(self, loc_info):
+    def retrieve_and_write_file(self, loc_info, progress):
         """ Perform checks and initialization before downloading file """
         wanted_files = loc_info['mode']['wanted_files']
         m_folder = loc_info['mode']['folder']
@@ -314,7 +318,8 @@ class Worker:
                         os.makedirs(path)
                     loc_info['folderpath'] = folderpath
                     self.download_file(loc_info)
-                    self.progress.add_file_done(folderpath, filename)
+                    # FIXME only file_wrapper knows for certain if the file is complete.
+                    progress.add_file_done(folderpath, filename)
 
     def download_file(self, loc_info):
         """ Download the file with the wrapper object """
@@ -330,7 +335,7 @@ class Worker:
             ftp_helper.retr(self.connection, ftp_helper.create_retr(
                 loc_info['abs_path']), call)
             self.log_info("Downloading... " + loc_info['filename'])
-        except error_perm as exc:
+        except ftplib.error_perm as exc:
             # #self.log_error("Current remote dir: " +
             #                str(list(connection.mlsd("."))))
             self.log_error("Tried path: " + loc_info['abs_path'])

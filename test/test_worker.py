@@ -16,6 +16,9 @@ mode_record = {"wanted_files": Constant.wanted_files_record,
 mode_snap = {"wanted_files": Constant.wanted_files_snap,
              "folder": Constant.snap_folder, "int_mode": 1, 'separator': '-'}
 
+# TODO test multiple folders zipping and deleting locally and remotely.
+# Use queue for done_folders?
+# TODO test timeout with big files
 
 class TestWorker(unittest.TestCase):
 
@@ -25,8 +28,7 @@ class TestWorker(unittest.TestCase):
         mock_worker.reset_mock()
         self.args = helper.get_args_obj()
         self.args['conf'] = Conf()
-        self.progress = Progress()
-        self.worker = Worker(mock_worker.conn, self.progress, self.args)
+        self.worker = Worker(mock_worker.conn, self.args)
         #helper.log_to_stdout('Worker', 'info')
 
     def tearDown(self):
@@ -34,7 +36,7 @@ class TestWorker(unittest.TestCase):
 
     def init_worker(self, args):
         """ Supply different args """
-        self.worker = Worker(mock_worker.conn, self.progress, args)
+        self.worker = Worker(mock_worker.conn, args)
 
     #@unittest.SkipTest
     def test_check_currently_recording(self):
@@ -43,7 +45,7 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.args['conf'].currently_recording, True)
         mock_worker.conn.retrbinary = umock.Mock(
             side_effect=mock_worker.retrbinary_false, spec=str)
-        self.worker = Worker(mock_worker.conn, self.progress, self.args)
+        self.worker = Worker(mock_worker.conn, self.args)
         self.worker.check_currently_recording()
         self.assertEqual(self.args['conf'].currently_recording, False)
 
@@ -83,15 +85,11 @@ class TestWorker(unittest.TestCase):
 
         self.assertDictEqual(result[0], mode_record)
         self.assertDictEqual(result[1], mode_snap)
-        self.assertEqual(check_done.called, True, "Called check_done_folders")
         self.assertListEqual(mock_worker.conn.method_calls,
                              calls, "Called check_currently_recording")
 
+    #@unittest.SkipTest
     def test_get_footage(self):
-        # TODO:
-        # want to test if folder recording is skipped
-        # want to verify that the cur folder is set on progress object
-        # done: assert number of files downloaded are correct.
         self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
 
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
@@ -118,11 +116,18 @@ class TestWorker(unittest.TestCase):
                 helper.get_current_date_time_rounded(), 'ascii')
             self.worker.read_sdrec_content(file_handle)
             self.worker.get_footage(mode_snap)
-            self.assertEqual(self.worker.progress.done_files, 16)
+            self.assertEqual(self.worker.progress_objects[0].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[1].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[2].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[3].done_files, 4)
 
             self.args['conf'].currently_recording = False
             self.worker.get_footage(mode_snap)
-            self.assertEqual(self.worker.progress.done_files, 20)
+            self.assertEqual(self.worker.progress_objects[0].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[1].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[2].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[3].done_files, 4)
+            self.assertEqual(self.worker.progress_objects[4].done_files, 4)
 
     #@unittest.SkipTest
     def test_init_zip_folder(self):
@@ -347,7 +352,7 @@ class TestWorker(unittest.TestCase):
         with umock.patch("foscambackup.progress.Progress.check_folders_done", check_folders), \
                 umock.patch("foscambackup.worker.Worker.init_zip_folder", init_zip), \
                 umock.patch("foscambackup.worker.Worker.zip_and_delete", zip_and_delete):
-            self.worker.check_done_folders()
+            self.worker.check_done_folders(Progress("BS"))
 
         verify = [call('snap/20170101'), call('record/20170101')]
         self.assertListEqual(check_folders.call_args_list, [call()])
@@ -379,7 +384,7 @@ class TestWorker(unittest.TestCase):
             self.assertListEqual(clean.call_args_list, [call(folder)])
             self.assertListEqual(delete.call_args_list, verify_delete)
 
-    # #@unittest.SkipTest
+    #@unittest.SkipTest
     def test_check_folder_state_delete(self):
         def delete_method(fullpath, folder):
             self.worker.set_remote_deleted(folder)
@@ -404,7 +409,7 @@ class TestWorker(unittest.TestCase):
             '/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101', 'record/20170101')])
         self.assertTrue(self.worker.get_remote_deleted(folder), 1)
 
-    #@unittest.SkipTest
+    ##@unittest.SkipTest
     def test_crawl_folder(self):
         # count recursion and calls to craw_files.
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd2
@@ -414,32 +419,31 @@ class TestWorker(unittest.TestCase):
         file_list = mock_worker.conn.mlsd(
             "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101")
 
-        def permit(arg):
+        def permit(arg0, arg1):
             pass
 
         crawl = umock.MagicMock(side_effect=permit)
 
         with umock.patch("foscambackup.worker.Worker.crawl_files", crawl):
-            self.worker.crawl_folder(file_list, mode_snap, parent)
-
-        file_list = ['20170101-120000.jpg', '20170101-140000.jpg',
-                     '20170101-160000.jpg', '20170101-170000.jpg']
-        verify_list = []
-        for filename in file_list:
-            subfolder = filename
-            _type = "dir"
-            if len(filename) > 2:
-                subfolder = filename[:-4]
-                _type = 'file'
-            verify_list.append(call({
-                'mode': mode_snap,
-                'parent_dir': '20170101',
-                'abs_path': parent_path + "/" + subfolder + "/" + filename,
-                'filename': filename,
-                'desc': {'type': _type}}))
-
-        self.assertListEqual(crawl.call_args_list, verify_list,
-                             msg="Failed to verify the calls")
+            instance = Progress("snap/20170101")
+            self.worker.crawl_folder(file_list, mode_snap, instance, parent)
+            file_list = ['20170101-120000.jpg', '20170101-140000.jpg',
+                            '20170101-160000.jpg', '20170101-170000.jpg']
+            verify_list = []
+            for filename in file_list:
+                subfolder = filename
+                _type = "dir"
+                if len(filename) > 2:
+                    subfolder = filename[:-4]
+                    _type = 'file'
+                verify_list.append(call({
+                    'mode': mode_snap,
+                    'parent_dir': '20170101',
+                    'abs_path': parent_path + "/" + subfolder + "/" + filename,
+                    'filename': filename,
+                    'desc': {'type': _type}}, instance))
+            self.assertListEqual(crawl.call_args_list, verify_list,
+                                    msg="Failed to verify the calls")
 
     #@unittest.SkipTest
     def test_crawl_files(self):

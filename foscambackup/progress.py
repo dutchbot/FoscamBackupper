@@ -9,13 +9,14 @@ import foscambackup.file_helper as file_helper
 class Progress:
     """ Track progress """
     logger = logging.getLogger('Worker')
+    max_files = -1
 
-    def __init__(self, test=False):
-        self.max_files = -1
+    def __init__(self, cur_folder, test=False):
+        if not isinstance(cur_folder, str):
+            raise ValueError("Cur_folder must be a string!")
         self.done_files = 0
-        self.done_folders = []
         self.done_progress = {}
-        self.cur_folder = None
+        self.cur_folder = cur_folder
         self.absolute_dir = helper.get_cwd()
         self.complete_folders = []
 
@@ -36,7 +37,7 @@ class Progress:
         except FileNotFoundError:
             self.logger.info("No previous unfinished result found.")
 
-    def load_and_init_done_folders(self, read_file):
+    def load_and_init_complete_folders(self, read_file):
         """ Restore from previous file """
         content = read_file.readlines()
         for line in content:
@@ -44,14 +45,13 @@ class Progress:
             done = self.init_empty(cleaned)
             done['done'] = 1
             self.initialize_done_progress(cleaned, done)
-            self.done_folders.append(cleaned)
+            self.complete_folders.append(cleaned)
 
-    # opens file line cleans it, writes initialize, appends to done_folders
     def read_state_file(self):
         """ Read from state file """
         try:
             fname = helper.construct_path(self.absolute_dir, [Constant.state_file])
-            file_helper.open_readonly_file(fname, self.load_and_init_done_folders)
+            file_helper.open_readonly_file(fname, self.load_and_init_complete_folders)
         except FileNotFoundError:
             self.logger.info("No state file found.")
 
@@ -68,7 +68,7 @@ class Progress:
         """ Check if folder was already done """
         self.logger.debug("Mode " + mode + " " + foldername)
         # check all the files for 1 value
-        for folder in self.done_folders:
+        for folder in self.complete_folders:
             if folder == helper.construct_path(mode, [foldername]):
                 return True
         return False
@@ -154,7 +154,7 @@ class Progress:
 
     def save(self):
         """ Save progress """
-        if self.cur_folder != None:
+        if self.cur_folder != None and self.cur_folder !="":
             self.logger.debug("Saving progress..")
             mode_folder = self.cur_folder
             return self.save_progress_for_unfinished(mode_folder)
@@ -167,8 +167,8 @@ class Progress:
     def read_last_processed_folder(self, folder):
         """ Read the last processed folder json """
         try:
-            self.logger.debug(self.done_folders)
-            for directory in self.done_folders:
+            self.logger.debug(self.complete_folders)
+            for directory in self.complete_folders:
                 if directory == folder:
                     self.logger.info("Not saving folder, because already done.")
                     return None

@@ -36,7 +36,7 @@ class TestIntegrationWorker(unittest.TestCase):
         helper.mock_dir_offset_parentdir(self.conf)
         self.args = args
         self.args['conf'] = self.conf
-        self.progress = Progress()
+        self.progress = Progress("")
 
     def tearDown(self):
         ftp_helper.close_connection(self.connection)
@@ -110,7 +110,7 @@ class TestIntegrationWorker(unittest.TestCase):
         pdir = parent_dir+helper.sl()+sub_dir
         abs_path = helper.get_abs_path(self.conf, m_folder)
         abs_path = helper.construct_path(abs_path,[pdir,filename])
-        loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir,'abs_path': abs_path,
+        loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir, 'abs_path': abs_path,
             'filename': filename, 'desc': desc}
         self.worker.retrieve_and_write_file(loc_info)
         verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
