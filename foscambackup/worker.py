@@ -57,7 +57,9 @@ class Worker:
         dir_list = ftp_helper.mlsd(self.connection, helper.sl() + Constant.base_folder)
         for directory, _ in dir_list:
             if directory == Constant.sd_rec:
-                ftp_helper.retr(self.connection, ftp_helper.create_retr(helper.sl() + Constant.base_folder + helper.sl() + directory), self.read_sdrec_content)
+                absolute_remote_path = helper.sl() + Constant.base_folder + helper.sl() + directory
+                retr_command = ftp_helper.create_retrcmd(absolute_remote_path)
+                ftp_helper.retr(self.connection, ftp_helper.create_retrcmd(absolute_remote_path), self.read_sdrec_content)
                 break
 
     def read_sdrec_content(self, file_handle):
@@ -125,16 +127,17 @@ class Worker:
 
             if helper.not_check_subdir(subdir, foldername) is False:
                 continue
+            
+            abs_path = helper.get_abs_path(self.conf, mode)
 
             if subdir:
                 if desc['type'] == 'file':
-                    subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, subdir['current']])
+                    subdir['path'] = helper.construct_path(abs_path, [parent, subdir['current']])
                 else:
-                    subdir['path'] = helper.construct_path(helper.get_abs_path(self.conf, mode), [parent, foldername])
+                    subdir['path'] = helper.construct_path(abs_path, [parent, foldername])
             else:
                 subdir = {"path":'', "subdirs":[foldername]}
-                subdir['path'] = helper.construct_path(helper.get_abs_path(
-                    self.conf, mode), [parent, foldername])
+                subdir['path'] = helper.construct_path(abs_path, [parent, foldername])
             if helper.check_file_type_dir(desc) and subdir['path'] != "" and helper.check_not_curup(foldername):
                 path = subdir['path']
                 self.log_info("Querying path: " + path)
@@ -203,7 +206,7 @@ class Worker:
                 file_list = ftp_helper.mlsd(self.connection, sub_path)
                 for filename, desc in file_list:
                     if desc['type'] != "dir":
-                        if filename != "." and filename != "..": # should be cleared from the list
+                        if filename != "." and filename != "..":
                             file_path = helper.construct_path(
                                 sub_path, [filename])
                             self.connection.delete(file_path)
@@ -293,7 +296,7 @@ class Worker:
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))
-        """ Process the actual files """
+
         if helper.check_not_dat_file(loc_info['filename']):
             progress.add_file_init(helper.construct_path(
                 loc_info['mode']["folder"], [loc_info['parent_dir']]), loc_info['filename'])

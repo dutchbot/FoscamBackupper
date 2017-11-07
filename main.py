@@ -19,7 +19,6 @@ def main():
     con = None
     try:
         parser = CommandParser()
-        progress = Progress()
         args = parser.commandline_args()
         if isinstance(args.__class__, type(argparse.ArgumentParser)):
             args = args.__dict__
@@ -42,7 +41,7 @@ def main():
         if args['conf'].model == "<model_serial>":
             args['conf'].write_model_to_conf(helper.retrieve_model_serial(con))
 
-        worker = Worker(con, progress, args)
+        worker = Worker(con, args)
         worker.get_files()
     except KeyboardInterrupt:
         logger.info("Program stopped by user, bye :)")

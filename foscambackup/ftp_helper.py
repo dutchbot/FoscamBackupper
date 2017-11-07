@@ -47,7 +47,7 @@ def retr(con, abs_path, callback):
     """ Download binary file """
     con.retrbinary(abs_path, callback)
 
-def create_retr(path):
+def create_retrcmd(path):
     """ Create the RETR command at path """
     if "." in path: # Really basic check for file ext
         return "RETR " + path

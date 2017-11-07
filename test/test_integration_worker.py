@@ -18,6 +18,7 @@ import helper
 
 DELETE_TESTS = True
 
+#TODO add test like we call from main.py..
 @unittest.SkipTest
 class TestIntegrationWorker(unittest.TestCase):
     """ Basically an integration / system test """
@@ -59,8 +60,8 @@ class TestIntegrationWorker(unittest.TestCase):
     @staticmethod
     def tearDownClass():
         TestIntegrationWorker.testserver.close()
-        #TestIntegrationWorker.testserver.cleanup_remote_directory()
-        #helper.cleanup_directories(TestIntegrationWorker.output_path)
+        TestIntegrationWorker.testserver.cleanup_remote_directory()
+        helper.cleanup_directories(TestIntegrationWorker.output_path)
         TestIntegrationWorker.thread.join()
     
     @unittest.SkipTest
@@ -80,7 +81,7 @@ class TestIntegrationWorker(unittest.TestCase):
 
         for dirkey, _ in dirs:
             count_dir += 1
-            if(dirkey == created_dir):
+            if dirkey == created_dir:
                 self.connection.rmd(created_dir)
 
         after_dirs = self.connection.mlsd(facts=['type'])
@@ -98,8 +99,8 @@ class TestIntegrationWorker(unittest.TestCase):
 
     @unittest.SkipTest
     def test_download_output_path(self):
-        time.sleep(2)
         """ Verify that we can retrieve and write a file to a specific directory """
+        time.sleep(2)
         self.init_worker()
         desc = {'type': 'file'}
         mode = self.mode
@@ -111,8 +112,8 @@ class TestIntegrationWorker(unittest.TestCase):
         # First set the correct working dir
         pdir = parent_dir+helper.sl()+sub_dir
         abs_path = helper.get_abs_path(self.conf, m_folder)
-        abs_path = helper.construct_path(abs_path,[pdir,filename])
-        loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir, 'abs_path': abs_path,
+        abs_path = helper.construct_path(abs_path, [pdir, filename])
+        loc_info = {'mode': mode, 'parent_dir': parent_dir + helper.sl() + sub_dir, 'abs_path': abs_path,
             'filename': filename, 'desc': desc}
         self.worker.retrieve_and_write_file(loc_info, Progress(parent_dir))
         verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
@@ -130,9 +131,9 @@ class TestIntegrationWorker(unittest.TestCase):
         filenames = self.get_list_of_files(folder)
         mode = self.mode
         self.worker.get_footage(mode)
-        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
-        helper.verify_file_count(verify_path,filenames)
-    
+        verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
+        helper.verify_file_count(verify_path, filenames)
+
     @unittest.SkipTest
     def test_worker_recorded_footage_download_delete_local(self):
         """ Test that we can delete local folder """
@@ -144,10 +145,6 @@ class TestIntegrationWorker(unittest.TestCase):
         filenames = self.get_list_of_files(folder)
         mode = self.mode
         self.worker.get_footage(mode)
-        #force it
-        dict_folder ={"path":folder+helper.sl()+parent_dir}
-        #self.progress.write_done_folder(dict_folder, dict_folder['path'])
-
         self.worker.check_done_folders(Progress(""))
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_files_deleted(verify_path, filenames)
@@ -161,8 +158,8 @@ class TestIntegrationWorker(unittest.TestCase):
         filenames = self.get_list_of_files(folder)
         mode = self.mode_snap
         self.worker.get_footage(mode)
-        verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
-        helper.verify_file_count(verify_path,filenames)
+        verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
+        helper.verify_file_count(verify_path, filenames)
 
     @unittest.SkipTest
     def test_worker_snapandrecorded_footage_download(self):
@@ -175,15 +172,15 @@ class TestIntegrationWorker(unittest.TestCase):
         parent_dir_record = self.get_list_of_dirs(folder_record)
         filenames_record = self.get_list_of_files(folder_record)
         self.worker.get_files()
-        verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
-        verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
-        helper.verify_file_count(verify_path_snap,filenames_snap)
-        helper.verify_file_count(verify_path_record,filenames_record)
+        verify_path_snap = helper.construct_path(self.args['output_path'], [folder_snap, parent_dir_snap])
+        verify_path_record = helper.construct_path(self.args['output_path'], [folder_record, parent_dir_record])
+        helper.verify_file_count(verify_path_snap, filenames_snap)
+        helper.verify_file_count(verify_path_record, filenames_record)
 
     @unittest.SkipTest
     def test_worker_remote_delete(self):
+        """ Test remote deletion of folder """
         if DELETE_TESTS:
-            """ Test remote deletion of folder """
             # Important
             mode = self.mode
             self.args['mode'] = mode
@@ -192,17 +189,19 @@ class TestIntegrationWorker(unittest.TestCase):
             self.connection = ftp_helper.open_connection(self.conf)
             self.worker = Worker(self.connection, self.args)
             self.worker.get_footage(mode)
+
             for progress in self.worker.progress_objects:
                 self.worker.check_done_folders(progress)
-                print("Current folder: " + "/IPCamera/FXXXXXX_CXXXXXXXXXXX/"+progress.cur_folder)
-                self.assertTrue(self.check_parent_dir_deleted("/IPCamera/FXXXXXX_CXXXXXXXXXXX/"+progress.cur_folder))
+                abspath_parent = "/IPCamera/FXXXXXX_CXXXXXXXXXXX/" + progress.cur_folder
+                result = self.check_parent_dir_deleted(abspath_parent)
+                self.assertTrue(result)
         else:
             pass
 
     @unittest.SkipTest
     def test_worker_snapandrecorded_footage_download_delete_zip(self):
+        """ Test our main entry point for downloading both types of footage """
         if DELETE_TESTS:
-            """ Test our main entry point for downloading both types of footage """
             self.args["dry_run"] = False
             self.args["delete_rm"] = True
             self.args['zip_files'] = True
@@ -214,8 +213,8 @@ class TestIntegrationWorker(unittest.TestCase):
             parent_dir_record = self.get_list_of_dirs(folder_record)
             filenames_record = self.get_list_of_files(folder_record)
             self.worker.get_files()
-            verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
-            verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
+            verify_path_snap = helper.construct_path(self.args['output_path'], [folder_snap, parent_dir_snap])
+            verify_path_record = helper.construct_path(self.args['output_path'], [folder_record, parent_dir_record])
             helper.verify_file_count(verify_path_snap, filenames_snap)
             helper.verify_file_count(verify_path_record, filenames_record)
         else:
@@ -233,7 +232,7 @@ class TestIntegrationWorker(unittest.TestCase):
         self.connection = ftp_helper.open_connection(self.conf)
         self.worker = Worker(self.connection, self.args)
 
-    def check_parent_dir_deleted(self,folder):
+    def check_parent_dir_deleted(self, folder):
         return self.get_list_of_dirs(folder) is None
 
     def get_list_of_dirs(self, mode, subdir=False):
@@ -254,7 +253,7 @@ class TestIntegrationWorker(unittest.TestCase):
 
     def get_list_of_files(self, mode):
         path = helper.get_abs_path(self.conf, mode)
-        list_dir = helper.mlsd(self.connection,path)
+        list_dir = helper.mlsd(self.connection, path)
         for dirname, _ in list_dir:
             subpath = path + helper.sl() + dirname
             list_subdirs = self.connection.mlsd(subpath)
