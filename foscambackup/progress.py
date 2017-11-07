@@ -130,7 +130,7 @@ class Progress:
         self.logger.debug("Files: " + str(number_of_files) + " Actual: " + str(actual_done))
         return number_of_files == actual_done
 
-    def check_folders_done(self):
+    def check_folder_done(self):
         """ Check which folders are already complete """
         for folder_name, folder in self.done_progress.items():
             if folder["done"] != 1:

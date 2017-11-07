@@ -81,6 +81,9 @@ class TestHelper(unittest.TestCase):
         self.assertEqual(helper.verify_path(path, mode), True)
         path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910_143000"
         self.assertEqual(helper.verify_path(path, mode), True)
+        mode = {"separator":"_"}
+        path = "/IPCamera/FXXXXXX_CXXXXXXXXXXX/snap/20171107/20171107_190000/20171107_192555.jpg"
+        self.assertEqual(helper.verify_path(path, mode), True)
         with self.assertRaises(ValueError):
             path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910.av/testfile.avi"
             helper.verify_path(path, mode)

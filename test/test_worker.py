@@ -349,7 +349,7 @@ class TestWorker(unittest.TestCase):
         init_zip = umock.Mock(side_effect=generic)
         zip_and_delete = umock.Mock(side_effect=generic)
         check_folders = umock.Mock(side_effect=check_folders_done)
-        with umock.patch("foscambackup.progress.Progress.check_folders_done", check_folders), \
+        with umock.patch("foscambackup.progress.Progress.check_folder_done", check_folders), \
                 umock.patch("foscambackup.worker.Worker.init_zip_folder", init_zip), \
                 umock.patch("foscambackup.worker.Worker.zip_and_delete", zip_and_delete):
             self.worker.check_done_folders(Progress("BS"))

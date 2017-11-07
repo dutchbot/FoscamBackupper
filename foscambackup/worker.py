@@ -242,7 +242,7 @@ class Worker:
     def check_done_folders(self, progress):
         """ Check which folders are marked as done and process them for deletion and/or zipping """
         self.log_debug("Check done folders")
-        done_folders = sorted(progress.check_folders_done(), reverse=True)
+        done_folders = sorted(progress.check_folder_done(), reverse=True)
         self.log_debug(done_folders)
         self.log_debug(self.folder_actions)
         count = 0

@@ -27,6 +27,10 @@ class TestIntegrationWorker(unittest.TestCase):
     conf = None
     worker = None
     connection = None
+    mode = {"wanted_files": Constant.wanted_files_record,
+        "folder": Constant.record_folder, "int_mode": 0, "separator":"_"}
+    mode_snap = {"wanted_files": Constant.wanted_files_snap,
+        "folder": Constant.snap_folder, "int_mode": 1, "separator":"-"}
 
     def setUp(self):
         args =  helper.get_args_obj()
@@ -36,7 +40,6 @@ class TestIntegrationWorker(unittest.TestCase):
         helper.mock_dir_offset_parentdir(self.conf)
         self.args = args
         self.args['conf'] = self.conf
-        self.progress = Progress("")
 
     def tearDown(self):
         ftp_helper.close_connection(self.connection)
@@ -56,8 +59,8 @@ class TestIntegrationWorker(unittest.TestCase):
     @staticmethod
     def tearDownClass():
         TestIntegrationWorker.testserver.close()
-        TestIntegrationWorker.testserver.cleanup_remote_directory()
-        helper.cleanup_directories(TestIntegrationWorker.output_path)
+        #TestIntegrationWorker.testserver.cleanup_remote_directory()
+        #helper.cleanup_directories(TestIntegrationWorker.output_path)
         TestIntegrationWorker.thread.join()
     
     @unittest.SkipTest
@@ -98,9 +101,8 @@ class TestIntegrationWorker(unittest.TestCase):
         time.sleep(2)
         """ Verify that we can retrieve and write a file to a specific directory """
         self.init_worker()
-        mode = {"wanted_files": Constant.wanted_files_record,
-                "folder": Constant.record_folder, "int_mode": 0, "separator":"_"}
         desc = {'type': 'file'}
+        mode = self.mode
         m_folder = mode['folder']
         sub_dir = self.get_list_of_dirs(m_folder, True)
         parent_dir = self.get_list_of_dirs(m_folder)
@@ -112,7 +114,7 @@ class TestIntegrationWorker(unittest.TestCase):
         abs_path = helper.construct_path(abs_path,[pdir,filename])
         loc_info = {'mode': mode, 'parent_dir': parent_dir+helper.sl()+sub_dir, 'abs_path': abs_path,
             'filename': filename, 'desc': desc}
-        self.worker.retrieve_and_write_file(loc_info)
+        self.worker.retrieve_and_write_file(loc_info, Progress(parent_dir))
         verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
         if os.path.exists(verify_path):
             assert True
@@ -126,9 +128,7 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        mode = {"wanted_files": Constant.wanted_files_record,
-        "folder": Constant.record_folder, "int_mode": 0}
-        self.progress.current_mode = Constant.record_folder
+        mode = self.mode
         self.worker.get_footage(mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
@@ -142,15 +142,13 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'record'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        mode = {"wanted_files": Constant.wanted_files_record,
-        "folder": Constant.record_folder, "int_mode": 0}
-        self.progress.current_mode = Constant.record_folder
+        mode = self.mode
         self.worker.get_footage(mode)
         #force it
         dict_folder ={"path":folder+helper.sl()+parent_dir}
-        self.progress.write_done_folder(dict_folder, dict_folder['path'])
+        #self.progress.write_done_folder(dict_folder, dict_folder['path'])
 
-        self.worker.check_done_folders()
+        self.worker.check_done_folders(Progress(""))
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_files_deleted(verify_path, filenames)
 
@@ -161,9 +159,7 @@ class TestIntegrationWorker(unittest.TestCase):
         folder = 'snap'
         parent_dir = self.get_list_of_dirs(folder)
         filenames = self.get_list_of_files(folder)
-        mode = {"wanted_files": Constant.wanted_files_snap,
-        "folder": Constant.snap_folder, "int_mode": 1}
-        self.progress.current_mode = Constant.snap_folder
+        mode = self.mode_snap
         self.worker.get_footage(mode)
         verify_path = helper.construct_path(self.args['output_path'],[folder,parent_dir])
         helper.verify_file_count(verify_path,filenames)
@@ -189,16 +185,17 @@ class TestIntegrationWorker(unittest.TestCase):
         if DELETE_TESTS:
             """ Test remote deletion of folder """
             # Important
+            mode = self.mode
+            self.args['mode'] = mode
             self.args["dry_run"] = False
             self.args["delete_rm"] = True
             self.connection = ftp_helper.open_connection(self.conf)
-            self.worker = Worker(self.connection, self.progress, self.args)
-            mode = {"wanted_files": Constant.wanted_files_record,
-            "folder": Constant.record_folder, "int_mode": 0}
-            self.progress.current_mode = Constant.record_folder
+            self.worker = Worker(self.connection, self.args)
             self.worker.get_footage(mode)
-            self.worker.check_done_folders()
-            self.assertTrue(self.check_parent_dir_deleted(mode['folder']))
+            for progress in self.worker.progress_objects:
+                self.worker.check_done_folders(progress)
+                print("Current folder: " + "/IPCamera/FXXXXXX_CXXXXXXXXXXX/"+progress.cur_folder)
+                self.assertTrue(self.check_parent_dir_deleted("/IPCamera/FXXXXXX_CXXXXXXXXXXX/"+progress.cur_folder))
         else:
             pass
 
@@ -219,22 +216,22 @@ class TestIntegrationWorker(unittest.TestCase):
             self.worker.get_files()
             verify_path_snap = helper.construct_path(self.args['output_path'],[folder_snap,parent_dir_snap])
             verify_path_record = helper.construct_path(self.args['output_path'],[folder_record,parent_dir_record])
-            helper.verify_file_count(verify_path_snap,filenames_snap)
-            helper.verify_file_count(verify_path_record,filenames_record)
+            helper.verify_file_count(verify_path_snap, filenames_snap)
+            helper.verify_file_count(verify_path_record, filenames_record)
         else:
             pass
     
     @unittest.SkipTest
     def test_get_file_size(self):
         self.init_worker()
-        abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + "/" + helper.get_current_date_time_rounded() + "/" + helper.get_current_date_time() + ".jpg"
+        abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + "/" + helper.get_current_date_time_rounded("-") + "/" + helper.get_current_date_time("-") + ".jpg"
         self.assertEqual(ftp_helper.size(self.connection, abs_path), 2048)
 
     """ Test helpers """
 
     def init_worker(self):
         self.connection = ftp_helper.open_connection(self.conf)
-        self.worker = Worker(self.connection, self.progress, self.args)
+        self.worker = Worker(self.connection, self.args)
 
     def check_parent_dir_deleted(self,folder):
         return self.get_list_of_dirs(folder) is None
@@ -242,14 +239,18 @@ class TestIntegrationWorker(unittest.TestCase):
     def get_list_of_dirs(self, mode, subdir=False):
         path = helper.get_abs_path(self.conf, mode)
         list_dir = self.connection.mlsd(path)
-        for dirname, _ in list_dir:
-            if subdir:
-                subpath = path + helper.sl() + dirname
-                list_subdirs = self.connection.mlsd(subpath)
-                for subdirname, _ in list_subdirs:
-                    return subdirname
-            return dirname
-        return None
+        try:
+            for dirname, _ in list_dir:
+                if subdir:
+                    subpath = path + helper.sl() + dirname
+                    list_subdirs = self.connection.mlsd(subpath)
+                    for subdirname, _ in list_subdirs:
+                        return subdirname
+                return dirname
+            return None
+        except error_perm as perm:
+            if "501" in perm.__str__():
+                return None
 
     def get_list_of_files(self, mode):
         path = helper.get_abs_path(self.conf, mode)

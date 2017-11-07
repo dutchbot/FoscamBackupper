@@ -42,10 +42,10 @@ def construct_path(start, folders=[], endslash=False):
             start += sl()
     return start
 
-def get_current_date_time_offset(offset):
+def get_current_date_time_offset(offset, sep="_"):
     """ Get current date with offset """
     if offset != 0:
-        time_str = time.strftime("%Y%m%d_%H%M%S")
+        time_str = time.strftime("%Y%m%d"+sep+"%H%M%S")
         calc_offset = str(int(time_str[:-2]) + offset)
         l_timestr = list(time_str)
         l_timestr[-2] = calc_offset[0]
@@ -58,9 +58,9 @@ def get_current_date():
     """ This is the format for the date folder where the subfolders and files will be located. """
     return helper.get_current_date()
 
-def get_current_date_time_rounded():
+def get_current_date_time_rounded(sep='_'):
     """ This how the foscam model constructs the subfolders located in a date folder. """
-    return time.strftime("%Y%m%d_%H0000")
+    return time.strftime("%Y%m%d"+sep+"%H0000")
 
 def get_current_date_offset_day():
     """ Get current date and offset the day """
@@ -77,10 +77,10 @@ def get_current_date_offset_day():
     time_str = ''.join(l_timestr)
     return time_str
 
-def get_current_date_time_rounded_offset():
+def get_current_date_time_rounded_offset(sep='_'):
     """ This how the foscam model constructs the subfolders located in a date folder. """
     offset = 1
-    time_str = time.strftime("%Y%m%d_%H0000")
+    time_str = time.strftime("%Y%m%d"+sep+"%H0000")
     calc_offset = str(int(time_str[-6:-4]) + offset)
     l_timestr = list(time_str)
     l_timestr[-6] = calc_offset[0]
@@ -88,9 +88,9 @@ def get_current_date_time_rounded_offset():
     time_str = ''.join(l_timestr)
     return time_str
 
-def get_current_date_time():
+def get_current_date_time(sep='_'):
     """ This is how the filenames are constructed on the foscam camera."""
-    return time.strftime("%Y%m%d_%H%M%S")
+    return time.strftime("%Y%m%d"+sep+"%H%M%S")
 
 def get_verbosity():
     """Return current verbosity"""
@@ -160,7 +160,7 @@ def on_error(func, path, exc_info):
 def generate_mocked_snap_file(path):
     """ create mocked jpg file """
     file_content = get_rand_bytes((1024) * 2)  # 2 KB file
-    fname = get_current_date_time() + ".jpg"
+    fname = get_current_date_time("-") + ".jpg"
     fname = path + fname
     if not os.path.isfile(fname):
         try:
@@ -237,7 +237,7 @@ def mock_dir(conf):
     generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded('-'))
     generate_mocked_snap_file(new_path + sl())
 
     # important to discover the recursion error?
@@ -254,7 +254,7 @@ def mock_dir_offset_subdir(conf):
     generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded_offset)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda: get_current_date_time_rounded_offset('-'))
     generate_mocked_snap_file(new_path + sl())
 
 def mock_dir_offset_parentdir(conf):
@@ -264,7 +264,7 @@ def mock_dir_offset_parentdir(conf):
     generate_mocked_record_file(new_path + sl())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, get_current_date_time_rounded)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, lambda:get_current_date_time_rounded('-'))
     generate_mocked_snap_file(new_path + sl())
 
 def get_args_obj():

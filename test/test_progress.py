@@ -119,16 +119,6 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_230030.avi'] = 0
         self.assertEqual(self.progress.compare_files_done(folders[folder]), False)
 
-    def test_check_folders_done(self):
-        folder = "record/20160501"
-        folders = {}
-        folders[folder] = self.progress.init_empty(folder)
-        folders[folder]['20160501_220030.avi'] = 1
-        folders[folder]['20160501_230030.avi'] = 1
-        self.progress.done_progress = folders
-        with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
-            self.assertListEqual(self.progress.check_folders_done(), [folder])
-
     def test_write_done_folder_to_newline(self):
         folder = "record/20160501"
         args = {"path": folder}
