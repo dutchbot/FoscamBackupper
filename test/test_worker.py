@@ -10,6 +10,7 @@ from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 from mocks import mock_worker
 from mocks import mock_ftp
+from mocks import mock_file_helper
 
 mode_record = {"wanted_files": Constant.wanted_files_record,
                "folder": Constant.record_folder, "int_mode": 0, 'separator': '_'}
@@ -110,7 +111,8 @@ class TestWorker(unittest.TestCase):
         osmakedirs.makedirs = umock.MagicMock(side_effect=download_file)
 
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
-                umock.patch("os.makedirs", osmakedirs):
+                umock.patch("os.makedirs", osmakedirs), \
+                umock.patch("foscambackup.file_helper.open_appendonly_file", mock_file_helper.APPEND):
             # RECORDING
             file_handle = bytes(
                 helper.get_current_date_time_rounded(), 'ascii')

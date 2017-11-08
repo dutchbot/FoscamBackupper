@@ -120,7 +120,6 @@ class Progress:
 
     def compare_files_done(self, folder):
         """ Folder must be a list """
-        # we get a dict with 2 keys that say nothing about the folder
         number_of_files = len(folder.keys()) - 2
         actual_done = 0
         for key, value in folder.items():
@@ -174,13 +173,10 @@ class Progress:
                     return None
             last_file = self.done_progress[folder]
             return last_file
-        except KeyError:
-            self.logger.error("Key: " + folder)
-            self.logger.error("Key error in save_progress_for_unfinished")
-            self.logger.error(self.done_progress)
+        except KeyError as ex:
+            self.logger.debug(ex.__str__())
             return None
 
-    # save the progress of the last folder
     def save_progress_for_unfinished(self, folder):
         """ Save the progress for unfinished task """
         last_file = self.read_last_processed_folder(folder)

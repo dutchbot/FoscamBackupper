@@ -55,8 +55,7 @@ def create_retrcmd(path):
 
 def size(con, path):
     """ Return the file size at abs path """
-    result = con.sendcmd("TYPE i")
+    con.sendcmd("TYPE i")
     f_size = con.size(path)
-    result = con.sendcmd("TYPE A")
+    con.sendcmd("TYPE A")
     return f_size
-

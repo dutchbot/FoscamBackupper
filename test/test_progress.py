@@ -119,7 +119,17 @@ class TestProgress(unittest.TestCase):
         folders[folder]['20160501_230030.avi'] = 0
         self.assertEqual(self.progress.compare_files_done(folders[folder]), False)
 
-    def test_write_done_folder_to_newline(self):
+    def test_check_folders_done(self):
+        folder = "record/20160501"
+        folders = {}
+        folders[folder] = self.progress.init_empty(folder)
+        folders[folder]['20160501_220030.avi'] = 1
+        folders[folder]['20160501_230030.avi'] = 1
+        self.progress.done_progress = folders
+        with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
+            self.assertListEqual(self.progress.check_folder_done(), [folder])
+
+    def test_write_to_newline(self):
         folder = "record/20160501"
         args = {"path": folder}
 
@@ -129,6 +139,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(APPEND.buffer, folder+"\n")
 
     def test_write_done_folder(self):
+        """ write folder to state.log """
         foldername = "record/20160501"
         folder = {foldername: {"done":1, "path":foldername}}
         self.progress.done_progress[folder[foldername]['path']] = folder[foldername]
@@ -169,6 +180,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(WRITE.buffer, args['enc'])
 
     def test_read_processed_folder(self):
+        """ read progress """
         folder = "record/20160501"
         folders = {}
         folders[folder] = self.progress.init_empty(folder)
@@ -184,6 +196,7 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.read_last_processed_folder(folder), None)
 
     def test_save_progress_for_unfinished(self):
+        """ save progress """
         folder = "record/20160501"
         folders = {}
         folders[folder] = self.progress.init_empty(folder)
@@ -199,7 +212,7 @@ class TestProgress(unittest.TestCase):
 
         with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
             result = self.progress.save_progress_for_unfinished(folder)
-        self.assertEqual(result, False)
+            self.assertEqual(result, False)
 
         self.progress.done_progress = folders
         with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):

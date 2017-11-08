@@ -113,6 +113,7 @@ class Worker:
                         helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, progress, pdir)
+                    self.check_done_folders(progress)
                 else:
                     self.log_info("skipping folder because already done")
 
@@ -339,8 +340,6 @@ class Worker:
                 loc_info['abs_path']), call)
             self.log_info("Downloading... " + loc_info['filename'])
         except ftplib.error_perm as exc:
-            # #self.log_error("Current remote dir: " +
-            #                str(list(connection.mlsd("."))))
             self.log_error("Tried path: " + loc_info['abs_path'])
             self.log_error("Tried path: " +
                            str(list(ftp_helper.mlsd(self.connection, loc_info['abs_path']))))
