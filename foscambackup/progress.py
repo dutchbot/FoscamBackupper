@@ -60,8 +60,10 @@ class Progress:
         except FileNotFoundError:
             self.logger.info("No state file found.")
 
-    def check_for_previous_progress(self, prefix, folder, filename):
+    def check_for_previous_progress(self, prefix, loc_info):
         """ Check previous progress key """
+        folder = loc_info['parent_dir']
+        filename = loc_info['filename']
         try:
             if self.done_progress[helper.construct_path(prefix, [folder])][filename] == 1:
                 return True

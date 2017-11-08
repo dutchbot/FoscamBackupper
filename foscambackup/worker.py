@@ -128,7 +128,7 @@ class Worker:
 
             if helper.not_check_subdir(subdir, foldername) is False:
                 continue
-            
+    
             abs_path = helper.get_abs_path(self.conf, mode)
 
             if subdir:
@@ -139,6 +139,7 @@ class Worker:
             else:
                 subdir = {"path":'', "subdirs":[foldername]}
                 subdir['path'] = helper.construct_path(abs_path, [parent, foldername])
+
             if helper.check_file_type_dir(desc) and subdir['path'] != "" and helper.check_not_curup(foldername):
                 path = subdir['path']
                 self.log_info("Querying path: " + path)
@@ -173,7 +174,6 @@ class Worker:
                     folder_path = helper.construct_path(
                         self.output_path, [folder])
                     with ZipFile(path_file, 'w', compression=ZIP_LZMA) as myzip:
-                        # scandir would provide more info
                         for filex in os.listdir(helper.construct_path(self.output_path, [folder])):
                             self.log_debug("Adding to zip: " + filex)
                             myzip.write(helper.construct_path(
@@ -262,12 +262,12 @@ class Worker:
             thread = threading.Thread(target=self.zip_local_files_folder,
                                       args=(folder, ))
             thread.start()
-            thread.join()
 
         fullpath = helper.construct_path(self.output_path, [folder])
         delete_state = {'action_key': 'local_deleted',
                         'arg_key': 'delete_local_f', 'folder': folder, 'fullpath': fullpath}
         self.check_folder_state_delete(delete_state, self.delete_local_folder)
+
         if self.conf.model:
             fullpath = helper.construct_path(self.conf.model, [folder])
             fullpath = helper.construct_path(
@@ -293,7 +293,7 @@ class Worker:
 
     def crawl_files(self, loc_info, progress):
         """ Check if not already downloaded and valid filename, then download the file to our local path """
-        if progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info['parent_dir'], loc_info['filename']):
+        if progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info):
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))

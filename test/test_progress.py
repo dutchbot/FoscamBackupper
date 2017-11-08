@@ -55,9 +55,13 @@ class TestProgress(unittest.TestCase):
         path = 'record/20160501'
         self.progress.initialize_done_progress(path)
         self.progress.done_progress[path]['2345.avi'] = 1
-        result = self.progress.check_for_previous_progress("record", "20160501", "2345.avi")
+        loc_info = {}
+        loc_info['parent_dir'] = "20160501"
+        loc_info['filename'] = "2345.avi"
+        result = self.progress.check_for_previous_progress("record", loc_info)
         self.progress.done_progress[path]['233345.avi'] = 0
-        result = self.progress.check_for_previous_progress("record", "20160501", "233345.avi")
+        loc_info['filename'] = "233345.avi"
+        result = self.progress.check_for_previous_progress("record", loc_info)
         self.assertEqual(result, False)
 
     def test_check_done_folder(self):
