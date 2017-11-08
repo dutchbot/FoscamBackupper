@@ -30,7 +30,9 @@ class Progress:
         self.initialize_done_progress(progress_folder['path'], progress_folder)
 
     def construct_state_file_path(self):
-        return self.absolute_dir + helper.sl() + Constant.previous_state + self.cur_folder + Constant.previous_state_ext
+        abs_prefix = self.absolute_dir + helper.sl() + Constant.previous_state
+        names = self.cur_folder.split("/")
+        return abs_prefix + names[0] + "_" + names[1] + Constant.previous_state_ext
 
     def read_previous_state_file(self):
         """ Read previous progress from file """

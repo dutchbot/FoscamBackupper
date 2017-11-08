@@ -354,7 +354,7 @@ class TestWorker(unittest.TestCase):
         with umock.patch("foscambackup.progress.Progress.check_folder_done", check_folders), \
                 umock.patch("foscambackup.worker.Worker.init_zip_folder", init_zip), \
                 umock.patch("foscambackup.worker.Worker.zip_and_delete", zip_and_delete):
-            self.worker.check_done_folders(Progress("BS"))
+            self.worker.check_done_folders(Progress("mock/me"))
 
         verify = [call('snap/20170101'), call('record/20170101')]
         self.assertListEqual(check_folders.call_args_list, [call()])

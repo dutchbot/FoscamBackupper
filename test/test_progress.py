@@ -20,7 +20,7 @@ WRITE = mock_file_helper.WRITE
 class TestProgress(unittest.TestCase):
     
     def setUp(self):
-        self.progress = Progress("")
+        self.progress = Progress("mock/me")
         #test_helper.log_to_stdout('Worker','info')
 
     def tearDown(self):
@@ -151,6 +151,7 @@ class TestProgress(unittest.TestCase):
     def test_save(self):
         """ Test saving of state file """
         with self.assertRaises(ValueError):
+            self.progress.cur_folder = None
             self.progress.save()
         folder = "record/20160501"
         folders = {}

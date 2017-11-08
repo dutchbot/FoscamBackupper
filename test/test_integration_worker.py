@@ -115,7 +115,7 @@ class TestIntegrationWorker(unittest.TestCase):
         abs_path = helper.construct_path(abs_path, [pdir, filename])
         loc_info = {'mode': mode, 'parent_dir': parent_dir + helper.sl() + sub_dir, 'abs_path': abs_path,
             'filename': filename, 'desc': desc}
-        self.worker.retrieve_and_write_file(loc_info, Progress(parent_dir))
+        self.worker.retrieve_and_write_file(loc_info, Progress(pdir))
         verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
         if os.path.exists(verify_path):
             assert True
@@ -145,7 +145,7 @@ class TestIntegrationWorker(unittest.TestCase):
         filenames = self.get_list_of_files(folder)
         mode = self.mode
         self.worker.get_footage(mode)
-        self.worker.check_done_folders(Progress(""))
+        self.worker.check_done_folders(Progress("mock/me"))
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_files_deleted(verify_path, filenames)
 
