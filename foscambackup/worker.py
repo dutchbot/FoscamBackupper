@@ -336,7 +336,7 @@ class Worker:
             byte_size = ftp_helper.size(self.connection, loc_info['abs_path'])
             wrapper = FileWrapper(local_file_path, byte_size)
             call = wrapper.write_to_file
-            ftp_helper.retr(self.connection, ftp_helper.create_retr(
+            ftp_helper.retr(self.connection, ftp_helper.create_retrcmd(
                 loc_info['abs_path']), call)
             self.log_info("Downloading... " + loc_info['filename'])
         except ftplib.error_perm as exc:

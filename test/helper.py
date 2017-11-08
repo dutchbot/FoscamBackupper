@@ -228,9 +228,10 @@ def log_to_stdout(logname, level=''):
         logger.addHandler(channel)
 
 def mock_dir(conf):
-    # create IPCamera folder
-    # create record and snap folder
-    # create some mocked avi and jpg files
+    """ create IPCamera folder
+        create record and snap folder
+        create some mocked avi and jpg files
+    """
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
     new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded)
@@ -240,7 +241,6 @@ def mock_dir(conf):
     new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded('-'))
     generate_mocked_snap_file(new_path + sl())
 
-    # important to discover the recursion error?
     sdrecpath = Constant.base_folder+sl()+Constant.sd_rec
     if os.path.isfile(Constant.base_folder+sl()+Constant.sd_rec):
         with open(sdrecpath, 'w') as file:

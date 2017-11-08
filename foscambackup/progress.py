@@ -29,10 +29,13 @@ class Progress:
         progress_folder = json.load(read_file)
         self.initialize_done_progress(progress_folder['path'], progress_folder)
 
+    def construct_state_file_path(self):
+        return self.absolute_dir + helper.sl() + Constant.previous_state + self.cur_folder + Constant.previous_state_ext
+
     def read_previous_state_file(self):
         """ Read previous progress from file """
         try:
-            previous = self.absolute_dir + helper.sl() + Constant.previous_state
+            previous = self.construct_state_file_path()
             file_helper.open_readonly_file(previous, self.load_and_init)
         except FileNotFoundError:
             self.logger.info("No previous unfinished result found.")
@@ -182,7 +185,7 @@ class Progress:
         last_file = self.read_last_processed_folder(folder)
         if last_file:
             enc = json.dumps(last_file)
-            path = helper.construct_path(self.absolute_dir, [Constant.previous_state])
+            path = self.construct_state_file_path()
             args = {'enc':enc}
             import os
             if os.path.isfile(path):
