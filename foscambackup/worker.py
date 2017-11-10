@@ -14,7 +14,7 @@ from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 import foscambackup.helper as helper
 import foscambackup.ftp_helper as ftp_helper
-
+import foscambackup.file_helper as file_helper
 
 class Worker:
     """ Retrieves files for us """
@@ -59,7 +59,7 @@ class Worker:
             if directory == Constant.sd_rec:
                 absolute_remote_path = helper.sl() + Constant.base_folder + helper.sl() + directory
                 retr_command = ftp_helper.create_retrcmd(absolute_remote_path)
-                ftp_helper.retr(self.connection, ftp_helper.create_retrcmd(absolute_remote_path), self.read_sdrec_content)
+                ftp_helper.retr(self.connection, retr_command, self.read_sdrec_content)
                 break
 
     def read_sdrec_content(self, file_handle):
@@ -79,7 +79,7 @@ class Worker:
         """ Get the files for both recorded an snapshot footage """
         self.check_currently_recording()
         mode_record = {"wanted_files": Constant.wanted_files_record,
-                "folder": Constant.record_folder, "int_mode": 0 ,'separator':'_'}
+                "folder": Constant.record_folder, "int_mode": 0, 'separator':'_'}
         mode_snap = {"wanted_files": Constant.wanted_files_snap,
                 "folder": Constant.snap_folder, "int_mode": 1, 'separator':'-'}
         if self.args['mode'] != None:
@@ -92,28 +92,61 @@ class Worker:
             self.get_footage(mode_snap)
         self.log_info("finished downloading files")
 
+    def load_and_init_from_previous(self, read_file):
+        """ Restore from previous file """
+        already_processed = []
+        content = read_file.readlines()
+        for line in content:
+            cleaned = helper.clean_newline_char(line)
+            progress = Progress(cleaned)
+            progress.read_previous_progress_file()
+            already_processed.append(progress)
+        return already_processed
+            
+    def read_state_file(self, absolute_dir):
+        """ Read from state file """
+        try:
+            fname = helper.construct_path(absolute_dir, [Constant.state_file])
+            return file_helper.open_readonly_file(fname, self.load_and_init_from_previous)
+        except FileNotFoundError:
+            self.logger.info("No state file found.")
+
     def get_footage(self, mode):
         """ Get the footage based on the given mode, do some checks. """
         top_folders = ftp_helper.mlsd(
             self.connection, helper.get_abs_path(self.conf, mode))
         # Snapshot folders are also ordered by time periods
+
+        already_processed = self.read_state_file(self.args["output_path"])
+
         for pdir, desc in top_folders:
+            path_local = mode["folder"] + helper.sl() + pdir
+            
+            progress = Progress(path_local)
+            
+            skip = False
+            if already_processed != None:
+                for prev_progress in already_processed:
+                    if prev_progress.done_progress["done"] == 1 and prev_progress.cur_folder == progress.cur_folder:
+                        skip = True
+                        # perhaps check for remote_deleted, zipped and local_deleted?
+                        break
+
             if helper.check_file_type_dir(desc):
                 if self.conf.currently_recording:
-                    if helper.get_current_date() == pdir:
+                    if helper.get_current_date() == pdir or skip:
                         self.log_info(
                             "Skipping current recording folder: " + pdir)
                         continue
                 self.log_debug(pdir)
-                progress = Progress(mode["folder"] + helper.sl() + pdir)
                 self.progress_objects.append(progress)
-                if progress.check_done_folder(mode["folder"], pdir) is False:
+                if progress.check_done_folder() is False:
                     self.init_zip_folder(progress.cur_folder)
                     path = helper.construct_path(
                         helper.get_abs_path(self.conf, mode), [pdir])
                     val = ftp_helper.mlsd(self.connection, path)
                     self.crawl_folder(val, mode, progress, pdir)
-                    self.check_done_folders(progress)
+                    self.check_folder_done(progress)
                 else:
                     self.log_info("skipping folder because already done")
 
@@ -243,17 +276,11 @@ class Worker:
                 "Folder key was not initialized in zipped folders list!")
             self.delete_remote_folder(fullpath, folder)
 
-    def check_done_folders(self, progress):
+    def check_folder_done(self, progress):
         """ Check which folders are marked as done and process them for deletion and/or zipping """
-        self.log_debug("Check done folders")
-        done_folders = sorted(progress.check_folder_done(), reverse=True)
-        self.log_debug(done_folders)
-        self.log_debug(self.folder_actions)
-        count = 0
-        for folder in done_folders:
-            count += 1
-            self.log_debug(count)
-            self.zip_and_delete(folder)
+        self.log_debug("Check if folder is done")
+        if progress.check_done_folder():
+            self.zip_and_delete(progress.cur_folder)
 
     def zip_and_delete(self, folder):
         """ Function that does multiple checks for zipping and deleting """
@@ -297,10 +324,8 @@ class Worker:
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))
-
         if helper.check_not_dat_file(loc_info['filename']):
-            progress.add_file_init(helper.construct_path(
-                loc_info['mode']["folder"], [loc_info['parent_dir']]), loc_info['filename'])
+            progress.add_file_init(loc_info['filename'])
             self.retrieve_and_write_file(loc_info, progress)
 
     def retrieve_and_write_file(self, loc_info, progress):

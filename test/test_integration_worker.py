@@ -34,7 +34,7 @@ class TestIntegrationWorker(unittest.TestCase):
         "folder": Constant.snap_folder, "int_mode": 1, "separator":"-"}
 
     def setUp(self):
-        args =  helper.get_args_obj()
+        args = helper.get_args_obj()
         args["output_path"] = TestIntegrationWorker.output_path
         helper.mock_dir(self.conf)
         helper.mock_dir_offset_subdir(self.conf)
@@ -63,7 +63,7 @@ class TestIntegrationWorker(unittest.TestCase):
         TestIntegrationWorker.testserver.cleanup_remote_directory()
         helper.cleanup_directories(TestIntegrationWorker.output_path)
         TestIntegrationWorker.thread.join()
-    
+
     #@unittest.SkipTest
     def test_connection(self):
         """ Test for welcome message """
@@ -110,10 +110,10 @@ class TestIntegrationWorker(unittest.TestCase):
         filename = self.get_list_of_files(m_folder)[0][0]
 
         # First set the correct working dir
-        pdir = parent_dir+helper.sl()+sub_dir
+        pdir = parent_dir+helper.slash()+sub_dir
         abs_path = helper.get_abs_path(self.conf, m_folder)
         abs_path = helper.construct_path(abs_path, [pdir, filename])
-        loc_info = {'mode': mode, 'parent_dir': parent_dir + helper.sl() + sub_dir, 'abs_path': abs_path,
+        loc_info = {'mode': mode, 'parent_dir': parent_dir + helper.slash() + sub_dir, 'abs_path': abs_path,
             'filename': filename, 'desc': desc}
         self.worker.retrieve_and_write_file(loc_info, Progress(pdir))
         verify_path = helper.construct_path(self.args['output_path'], [m_folder, parent_dir, filename])
@@ -145,7 +145,7 @@ class TestIntegrationWorker(unittest.TestCase):
         filenames = self.get_list_of_files(folder)
         mode = self.mode
         self.worker.get_footage(mode)
-        self.worker.check_done_folders(Progress("mock/me"))
+        self.worker.check_folder_done(Progress("mock/me"))
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_files_deleted(verify_path, filenames)
 
@@ -191,7 +191,7 @@ class TestIntegrationWorker(unittest.TestCase):
             self.worker.get_footage(mode)
 
             for progress in self.worker.progress_objects:
-                self.worker.check_done_folders(progress)
+                self.worker.check_folder_done(progress)
                 abspath_parent = "/IPCamera/FXXXXXX_CXXXXXXXXXXX/" + progress.cur_folder
                 result = self.check_parent_dir_deleted(abspath_parent)
                 self.assertTrue(result)
@@ -219,11 +219,13 @@ class TestIntegrationWorker(unittest.TestCase):
             helper.verify_file_count(verify_path_record, filenames_record)
         else:
             pass
-    
+
     #@unittest.SkipTest
     def test_get_file_size(self):
         self.init_worker()
-        abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + "/" + helper.get_current_date_time_rounded("-") + "/" + helper.get_current_date_time("-") + ".jpg"
+        abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + \
+        "/" + helper.get_current_date_time_rounded("-") + \
+        "/" + helper.get_current_date_time("-") + ".jpg"
         self.assertEqual(ftp_helper.size(self.connection, abs_path), 2048)
 
     """ Test helpers """
@@ -241,7 +243,7 @@ class TestIntegrationWorker(unittest.TestCase):
         try:
             for dirname, _ in list_dir:
                 if subdir:
-                    subpath = path + helper.sl() + dirname
+                    subpath = path + helper.slash() + dirname
                     list_subdirs = self.connection.mlsd(subpath)
                     for subdirname, _ in list_subdirs:
                         return subdirname
@@ -255,8 +257,8 @@ class TestIntegrationWorker(unittest.TestCase):
         path = helper.get_abs_path(self.conf, mode)
         list_dir = helper.mlsd(self.connection, path)
         for dirname, _ in list_dir:
-            subpath = path + helper.sl() + dirname
+            subpath = path + helper.slash() + dirname
             list_subdirs = self.connection.mlsd(subpath)
             for subdir, _ in list_subdirs:
-                list_files = helper.mlsd(self.connection, subpath + helper.sl() + subdir)
+                list_files = helper.mlsd(self.connection, subpath + helper.slash() + subdir)
                 return list(list_files)
