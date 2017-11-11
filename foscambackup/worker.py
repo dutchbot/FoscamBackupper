@@ -289,6 +289,7 @@ class Worker:
             thread = threading.Thread(target=self.zip_local_files_folder,
                                       args=(folder, ))
             thread.start()
+            thread.join()
 
         fullpath = helper.construct_path(self.output_path, [folder])
         delete_state = {'action_key': 'local_deleted',
