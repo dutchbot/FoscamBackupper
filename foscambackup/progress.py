@@ -29,7 +29,7 @@ class Progress:
         self.initialize_done_progress(progress_folder)
 
     def construct_state_file_path(self):
-        abs_prefix = self.absolute_dir + helper.sl() + Constant.previous_state
+        abs_prefix = self.absolute_dir + helper.slash() + Constant.previous_state
         names = self.cur_folder.split("/")
         return abs_prefix + names[0] + "_" + names[1] + Constant.previous_state_ext
 

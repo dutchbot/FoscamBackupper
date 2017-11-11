@@ -9,7 +9,6 @@ from io import StringIO
 # own classes
 from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
-from foscambackup.constant import Constant
 import foscambackup.ftp_helper as ftp_helper
 
 def main():
@@ -33,7 +32,7 @@ def main():
             channel.setLevel(logging.WARNING)
         elif args["verbose"] == 'd':
             channel.setLevel(logging.DEBUG)
-    
+
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         channel.setFormatter(formatter)
         logger.addHandler(channel)
@@ -42,7 +41,7 @@ def main():
         handler.setFormatter(formatter)
         handler.setLevel(logging.DEBUG)
         logger.addHandler(handler)
-        
+
         args['conf'] = parser.read_conf()
         con = ftp_helper.open_connection(args['conf'])
 
@@ -70,7 +69,7 @@ def main():
         if con != None:
             ftp_helper.close_connection(con)
         if exc != None:
-            with open("debug.log","a") as file_debug:
+            with open("debug.log", "a") as file_debug:
                 file_debug.write(stream.getvalue())
                 traceback.print_tb(exc.__traceback__, file=file_debug)
         sys.exit(exc)

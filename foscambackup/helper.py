@@ -4,7 +4,7 @@ import time
 import shutil
 from foscambackup.constant import Constant
 
-def sl():
+def slash():
     """ return slash in use """
     return "/"
 
@@ -32,7 +32,7 @@ def check_not_curup(foldername):
 
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
-    splitted = folder.split(sl())
+    splitted = folder.split(slash())
     if len(splitted) == 3:
         return construct_path(splitted[0], [splitted[1]])
     return folder
@@ -72,7 +72,7 @@ def verify_path(path, mode):
 
 def get_abs_path(conf, mode):
     """ Construct the absolute remote path, looks like IPCamera/FXXXXXX_CXXXXXXXXXXX/[mode] """
-    return construct_path(sl() + Constant.base_folder, [conf.model, mode["folder"]])
+    return construct_path(slash() + Constant.base_folder, [conf.model, mode["folder"]])
 
 def construct_path(start, folders=[], endslash=False):
     """ Helps to get rid of all the slashes scattered throughout the program
@@ -83,18 +83,18 @@ def construct_path(start, folders=[], endslash=False):
     count = 0
     for folder in folders:
         if len(folders) != count:
-            start += sl()
+            start += slash()
         start += folder
         count += 1
         if len(folders) == count and endslash:
-            start += sl()
+            start += slash()
     return start
 
 def check_valid_folderkey(folder):
     """ Verify that key is correct """
     if folder is None or folder == '':
         raise ValueError("Foldername empty!")
-    if sl() in folder and len(folder.split(sl())[1]) == 8:
+    if slash() in folder and len(folder.split(slash())[1]) == 8:
         return True
     raise ValueError("Foldername truncated!")
 

@@ -29,9 +29,9 @@ def retrieve_model_serial(connection):
 
 def select_folder(folders=[]):
     """ Set remote folder command """
-    base = "CWD " + helper.sl() + Constant.base_folder
+    base = "CWD " + helper.slash() + Constant.base_folder
     for folder in folders:
-        base = base + helper.sl() + folder
+        base = base + helper.slash() + folder
     return base
 
 def mlsd(con, path):

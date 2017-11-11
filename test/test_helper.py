@@ -8,7 +8,7 @@ import time
 class TestHelper(unittest.TestCase):
 
     def test_sl(self):
-        self.assertEqual(helper.sl(), "/")
+        self.assertEqual(helper.slash(), "/")
 
     def test_get_current_date(self):
         self.assertEqual(helper.get_current_date(), time.strftime("%Y%m%d"))

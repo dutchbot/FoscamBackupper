@@ -12,7 +12,7 @@ def rmd(path):
 
 track = []
 def rmd_raise(path):
-    if path.count(helper.sl()) == 4 and not path in track:
+    if path.count(helper.slash()) == 4 and not path in track:
         track.append(path)
         raise error_perm("550")
     return True
@@ -30,11 +30,11 @@ def mlsd(*args, **kwargs):
             yield ("20170103", {'type': 'dir'})
             yield ("20170104", {'type': 'dir'})
             yield (helper.get_current_date(), {'type': 'dir'})
-        if args[0].count(helper.sl()) == 5:
-            dirname = args[0].split(helper.sl())[5]
+        if args[0].count(helper.slash()) == 5:
+            dirname = args[0].split(helper.slash())[5]
             yield (dirname + ".jpg", {'type': 'file'})
-        elif args[0].count(helper.sl()) == 4:
-            dirname = args[0].split(helper.sl())[4]
+        elif args[0].count(helper.slash()) == 4:
+            dirname = args[0].split(helper.slash())[4]
             yield (dirname + "-120000", {'type': 'dir'})
             yield (dirname + "-140000", {'type': 'dir'})
             yield (dirname + "-160000", {'type': 'dir'})
@@ -48,11 +48,11 @@ def mlsd2(*args, **kwargs):
         yield ("20170103", {'type': 'dir'})
         yield ("20170104", {'type': 'dir'})
         yield (helper.get_current_date(), {'type': 'dir'})
-    if args[0].count(helper.sl()) == 5:
-        dirname = args[0].split(helper.sl())[5]
+    if args[0].count(helper.slash()) == 5:
+        dirname = args[0].split(helper.slash())[5]
         yield (dirname + ".jpg", {'type': 'file'})
-    elif args[0].count(helper.sl()) == 4:
-        dirname = args[0].split(helper.sl())[4]
+    elif args[0].count(helper.slash()) == 4:
+        dirname = args[0].split(helper.slash())[4]
         yield (dirname + "-120000", {'type': 'dir'})
         yield (dirname + "-140000", {'type': 'dir'})
         yield (dirname + "-160000", {'type': 'dir'})

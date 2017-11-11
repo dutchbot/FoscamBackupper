@@ -54,10 +54,10 @@ class Worker:
 
     def check_currently_recording(self):
         """ Read the Sdrec file, which contains the current recording date """
-        dir_list = ftp_helper.mlsd(self.connection, helper.sl() + Constant.base_folder)
+        dir_list = ftp_helper.mlsd(self.connection, helper.slash() + Constant.base_folder)
         for directory, _ in dir_list:
             if directory == Constant.sd_rec:
-                absolute_remote_path = helper.sl() + Constant.base_folder + helper.sl() + directory
+                absolute_remote_path = helper.slash() + Constant.base_folder + helper.slash() + directory
                 retr_command = ftp_helper.create_retrcmd(absolute_remote_path)
                 ftp_helper.retr(self.connection, retr_command, self.read_sdrec_content)
                 break
@@ -120,7 +120,7 @@ class Worker:
         already_processed = self.read_state_file(self.args["output_path"])
 
         for pdir, desc in top_folders:
-            path_local = mode["folder"] + helper.sl() + pdir
+            path_local = mode["folder"] + helper.slash() + pdir
             
             progress = Progress(path_local)
             
@@ -195,7 +195,7 @@ class Worker:
 
     def zip_local_files_folder(self, folder):
         """ Arg folder is e.g record/01052017 """
-        split = folder.split(helper.sl())
+        split = folder.split(helper.slash())
         output = split[0]
         if os.path.exists(helper.construct_path(self.output_path, [output])):
             if os.path.exists(helper.construct_path(self.output_path, [folder])):
@@ -281,6 +281,7 @@ class Worker:
         self.log_debug("Check if folder is done")
         if progress.check_done_folder():
             self.zip_and_delete(progress.cur_folder)
+            progress.write_done_folder(progress.cur_folder)
 
     def zip_and_delete(self, folder):
         """ Function that does multiple checks for zipping and deleting """
@@ -299,7 +300,7 @@ class Worker:
         if self.conf.model:
             fullpath = helper.construct_path(self.conf.model, [folder])
             fullpath = helper.construct_path(
-                helper.sl() + Constant.base_folder, [fullpath])
+                helper.slash() + Constant.base_folder, [fullpath])
             delete_state = {'action_key': 'remote_deleted',
                             'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
             self.check_folder_state_delete(delete_state, self.delete_remote_folder)
@@ -374,6 +375,10 @@ class Worker:
                            loc_info['filename'] + " " + exc.__str__())
         except ValueError as exc:
             self.log_error(loc_info['abs_path'] + " : " + exc.__str__())
+        except EOFError:
+            self.connection = ftp_helper.open_connection(self.args['conf'])
+            wrapper.delete_file()
+            self.download_file(loc_info)
         finally:
             if wrapper != None:
                 wrapper.close_file()
