@@ -1,6 +1,6 @@
+""" Wrapper for downloading to local file """
 import decimal
 import progressbar
-""" Wrapper for downloading to local file """
 
 TWOPLACES = decimal.Decimal(10) ** -2
 
@@ -30,6 +30,13 @@ class FileWrapper:
             self.progressbar.finish()
         else:
             self.progressbar.update(progress)
+
+    def delete_file(self):
+        """ Used when the server closed our connection during download """
+        filename = self.cur_file.name
+        self.cur_file.close()
+        import os
+        os.remove(filename)
 
     def close_file(self):
         """  We use this to close the file at some point, this class does not know when to close """

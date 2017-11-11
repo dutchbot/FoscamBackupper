@@ -8,7 +8,7 @@ import time
 class TestHelper(unittest.TestCase):
 
     def test_sl(self):
-        self.assertEqual(helper.sl(), "/")
+        self.assertEqual(helper.slash(), "/")
 
     def test_get_current_date(self):
         self.assertEqual(helper.get_current_date(), time.strftime("%Y%m%d"))
@@ -80,6 +80,9 @@ class TestHelper(unittest.TestCase):
         path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910_143000/testfile.avi"
         self.assertEqual(helper.verify_path(path, mode), True)
         path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910_143000"
+        self.assertEqual(helper.verify_path(path, mode), True)
+        mode = {"separator":"_"}
+        path = "/IPCamera/FXXXXXX_CXXXXXXXXXXX/snap/20171107/20171107_190000/20171107_192555.jpg"
         self.assertEqual(helper.verify_path(path, mode), True)
         with self.assertRaises(ValueError):
             path = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170910/20170910.av/testfile.avi"

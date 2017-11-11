@@ -29,9 +29,9 @@ def retrieve_model_serial(connection):
 
 def select_folder(folders=[]):
     """ Set remote folder command """
-    base = "CWD " + helper.sl() + Constant.base_folder
+    base = "CWD " + helper.slash() + Constant.base_folder
     for folder in folders:
-        base = base + helper.sl() + folder
+        base = base + helper.slash() + folder
     return base
 
 def mlsd(con, path):
@@ -47,7 +47,7 @@ def retr(con, abs_path, callback):
     """ Download binary file """
     con.retrbinary(abs_path, callback)
 
-def create_retr(path):
+def create_retrcmd(path):
     """ Create the RETR command at path """
     if "." in path: # Really basic check for file ext
         return "RETR " + path
@@ -55,8 +55,7 @@ def create_retr(path):
 
 def size(con, path):
     """ Return the file size at abs path """
-    result = con.sendcmd("TYPE i")
+    con.sendcmd("TYPE i")
     f_size = con.size(path)
-    result = con.sendcmd("TYPE A")
+    con.sendcmd("TYPE A")
     return f_size
-

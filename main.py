@@ -4,22 +4,22 @@ import socket
 import logging
 import traceback
 import argparse
+from io import StringIO
 
 # own classes
-from foscambackup.progress import Progress
 from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
-from foscambackup.constant import Constant
 import foscambackup.ftp_helper as ftp_helper
 
 def main():
     """ Main """
-    progress = None
     logger = None
     con = None
+    worker = None
+    stream = StringIO()
+    exc = None
     try:
         parser = CommandParser()
-        progress = Progress()
         args = parser.commandline_args()
         if isinstance(args.__class__, type(argparse.ArgumentParser)):
             args = args.__dict__
@@ -32,35 +32,47 @@ def main():
             channel.setLevel(logging.WARNING)
         elif args["verbose"] == 'd':
             channel.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         channel.setFormatter(formatter)
         logger.addHandler(channel)
+
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+
         args['conf'] = parser.read_conf()
         con = ftp_helper.open_connection(args['conf'])
 
         if args['conf'].model == "<model_serial>":
-            args['conf'].write_model_to_conf(helper.retrieve_model_serial(con))
+            args['conf'].write_model_to_conf(ftp_helper.retrieve_model_serial(con))
 
-        worker = Worker(con, progress, args)
+        worker = Worker(con, args)
         worker.get_files()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as interrupt:
+        exc = interrupt
         logger.info("Program stopped by user, bye :)")
     except socket.timeout as stime:
+        exc = stime
         logger.warning("Failed to connect to ftp server")
         # 421 timeout?
         logger.debug(stime.__str__())
     except socket.error as serr:
+        exc = serr
         logger.warning("Failed to contact ftp server")
         logger.debug(serr.__str__())
-    except Exception:
-        traceback.print_exc()
     finally:
+        if worker != None and worker.progress_objects != None:
+            for progress in worker.progress_objects:
+                progress.save()
         if con != None:
             ftp_helper.close_connection(con)
-        if progress != None:
-            progress.save()
-        sys.exit()
+        if exc != None:
+            with open("debug.log", "a") as file_debug:
+                file_debug.write(stream.getvalue())
+                traceback.print_tb(exc.__traceback__, file=file_debug)
+        sys.exit(exc)
 
 if __name__ == "__main__":
     main()

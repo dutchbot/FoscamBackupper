@@ -1,3 +1,4 @@
+""" Helps with processing of files in a generic way with callbacks """
 import os
 
 def open_readonly_file(path, function):
@@ -5,8 +6,8 @@ def open_readonly_file(path, function):
     if os.path.isfile(path):
         read_file = None
         try:
-            read_file =  open(path, "r")
-            function(read_file)
+            read_file = open(path, "r")
+            return function(read_file)
         finally:
             if read_file:
                 read_file.close()

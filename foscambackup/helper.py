@@ -4,7 +4,7 @@ import time
 import shutil
 from foscambackup.constant import Constant
 
-def sl():
+def slash():
     """ return slash in use """
     return "/"
 
@@ -32,9 +32,7 @@ def check_not_curup(foldername):
 
 def clean_folder_path(folder):
     """ Remove the subdir to find the correct key in dict/list """
-    splitted = folder.split(sl())
-    # if "-" in folder: #failsafe
-    #     return folder[:-16]
+    splitted = folder.split(slash())
     if len(splitted) == 3:
         return construct_path(splitted[0], [splitted[1]])
     return folder
@@ -61,19 +59,20 @@ def clean_newline_char(line):
     return line
 
 def verify_path(path, mode):
+    """ Verify we constructed a valid remote path """
     import re
     regex = '\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}'
     sep = mode['separator']
     if sep == '_':
         regex = regex[:-9] + regex[-9:].replace('-', sep, 1)
-    p = re.compile(regex)
-    if p.match(path):
+    pattern = re.compile(regex)
+    if pattern.match(path):
         return True
     raise ValueError("Invalid constructed path!")
 
 def get_abs_path(conf, mode):
     """ Construct the absolute remote path, looks like IPCamera/FXXXXXX_CXXXXXXXXXXX/[mode] """
-    return construct_path(sl() + Constant.base_folder, [conf.model, mode["folder"]])
+    return construct_path(slash() + Constant.base_folder, [conf.model, mode["folder"]])
 
 def construct_path(start, folders=[], endslash=False):
     """ Helps to get rid of all the slashes scattered throughout the program
@@ -84,22 +83,23 @@ def construct_path(start, folders=[], endslash=False):
     count = 0
     for folder in folders:
         if len(folders) != count:
-            start += sl()
+            start += slash()
         start += folder
         count += 1
         if len(folders) == count and endslash:
-            start += sl()
+            start += slash()
     return start
 
 def check_valid_folderkey(folder):
     """ Verify that key is correct """
     if folder is None or folder == '':
         raise ValueError("Foldername empty!")
-    if sl() in folder and len(folder.split(sl())[1]) == 8:
+    if slash() in folder and len(folder.split(slash())[1]) == 8:
         return True
     raise ValueError("Foldername truncated!")
 
 def not_check_subdir(subdir, foldername):
+    """ Verify our current folder is not a subdirectory """
     if subdir:
         return not foldername in subdir['subdirs']
     return True
