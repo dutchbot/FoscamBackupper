@@ -24,7 +24,6 @@ class Progress:
 
     def load_and_init(self, read_file):
         """ Read the dict from file and parse with JSON module """
-        print(read_file)
         progress_folder = json.load(read_file)
         self.initialize_done_progress(progress_folder)
 
@@ -39,14 +38,13 @@ class Progress:
             previous = self.construct_state_file_path()
             file_helper.open_readonly_file(previous, self.load_and_init)
         except FileNotFoundError:
-            self.logger.info("No previous unfinished result found.")
+            self.logger.info("No previous unfinished result found for: " + self.cur_folder)
 
-    def check_for_previous_progress(self, prefix, loc_info):
+    def check_for_previous_progress(self, loc_info):
         """ Check previous progress key """
-        folder = loc_info['parent_dir']
         filename = loc_info['filename']
         try:
-            if self.done_progress[helper.construct_path(prefix, [folder])][filename] == 1:
+            if self.done_progress["files"][filename] == 1:
                 return True
             return False
         except KeyError:
@@ -125,33 +123,20 @@ class Progress:
         """ Save progress """
         if self.cur_folder != None and self.cur_folder !="":
             self.logger.debug("Saving progress..")
-            mode_folder = self.cur_folder
-            return self.save_progress_for_unfinished(mode_folder)
+            return self.save_progress_for_unfinished()
         raise ValueError("Missing current folder!")
 
     def write_progress_folder(self, write_file, args):
         """ Write json to file """
         write_file.write(args['enc'])
 
-    def read_last_processed_folder(self, folder):
-        """ Read the last processed folder json """
-        try:
-            last_file = self.done_progress[folder]
-            return last_file
-        except KeyError as ex:
-            self.logger.debug(ex.__str__())
-            return None
-
-    def save_progress_for_unfinished(self, folder):
+    def save_progress_for_unfinished(self):
         """ Save the progress for unfinished task """
-        last_file = self.read_last_processed_folder(folder)
-        if last_file:
-            enc = json.dumps(last_file)
-            path = self.construct_state_file_path()
-            args = {'enc':enc}
-            import os
-            if os.path.isfile(path):
-                os.remove(path)
-            file_helper.open_write_file(path, self.write_progress_folder, args)
-            return True
-        return False
+        enc = json.dumps(self.done_progress)
+        path = self.construct_state_file_path()
+        args = {'enc':enc}
+        import os
+        if os.path.isfile(path):
+            os.remove(path)
+        file_helper.open_write_file(path, self.write_progress_folder, args)
+        return True

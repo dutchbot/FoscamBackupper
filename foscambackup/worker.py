@@ -117,7 +117,7 @@ class Worker:
             self.connection, helper.get_abs_path(self.conf, mode))
         # Snapshot folders are also ordered by time periods
 
-        already_processed = self.read_state_file(self.args["output_path"])
+        already_processed = self.read_state_file(os.getcwd())
 
         for pdir, desc in top_folders:
             path_local = mode["folder"] + helper.slash() + pdir
@@ -126,11 +126,13 @@ class Worker:
             
             skip = False
             if already_processed != None:
+                # add check for unique cur_folder entries? or better clean state.log on reading.
                 for prev_progress in already_processed:
                     if prev_progress.done_progress["done"] == 1 and prev_progress.cur_folder == progress.cur_folder:
                         skip = True
                         # perhaps check for remote_deleted, zipped and local_deleted?
-                        break
+                    elif prev_progress.cur_folder == progress.cur_folder and prev_progress.done_progress["done"] == 0:
+                        progress = prev_progress
 
             if helper.check_file_type_dir(desc):
                 if self.conf.currently_recording:
@@ -322,7 +324,7 @@ class Worker:
 
     def crawl_files(self, loc_info, progress):
         """ Check if not already downloaded and valid filename, then download the file to our local path """
-        if progress.check_for_previous_progress(loc_info['mode']["folder"], loc_info):
+        if progress.check_for_previous_progress(loc_info):
             self.log_debug("skipping: " + loc_info['filename'])
             return
         self.log_debug("Called craw files with: " + str(loc_info))
@@ -363,9 +365,9 @@ class Worker:
             byte_size = ftp_helper.size(self.connection, loc_info['abs_path'])
             wrapper = FileWrapper(local_file_path, byte_size)
             call = wrapper.write_to_file
+            self.log_info("Downloading... " + loc_info['filename'])
             ftp_helper.retr(self.connection, ftp_helper.create_retrcmd(
                 loc_info['abs_path']), call)
-            self.log_info("Downloading... " + loc_info['filename'])
         except ftplib.error_perm as exc:
             self.log_error("Tried path: " + loc_info['abs_path'])
             self.log_error("Tried path: " +

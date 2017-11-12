@@ -15,12 +15,11 @@ APPEND = mock_file_helper.APPEND
 READ_STATE = mock_file_helper.READ_STATE
 READ_S = mock_file_helper.READ_S
 WRITE = mock_file_helper.WRITE
-# mock file read
+
+
 #@unittest.SkipTest
-
-
 class TestProgress(unittest.TestCase):
-
+    """ Test all the progress methods """
     def setUp(self):
         self.progress = Progress("mock/me")
         # test_helper.log_to_stdout('Worker','info')
@@ -49,10 +48,10 @@ class TestProgress(unittest.TestCase):
         loc_info = {}
         loc_info["parent_dir"] = "20160501"
         loc_info["filename"] = "2345.avi"
-        result = self.progress.check_for_previous_progress("record", loc_info)
+        result = self.progress.check_for_previous_progress(loc_info)
         self.progress.done_progress["files"]["233345.avi"] = 0
         loc_info["filename"] = "233345.avi"
-        result = self.progress.check_for_previous_progress("record", loc_info)
+        result = self.progress.check_for_previous_progress(loc_info)
         self.assertEqual(result, False)
 
     def test_is_max_files_reached(self):
@@ -165,42 +164,25 @@ class TestProgress(unittest.TestCase):
 
         self.assertEqual(WRITE.buffer, args['enc'])
 
-    def test_read_processed_folder(self):
-        """ read progress """
-        folder = "record/20160501"
-        folders = {}
-        folders[folder] = self.progress.init_empty(folder)
-        folders[folder]['20160501_220030.avi'] = 1
-        folders[folder]['20160501_230030.avi'] = 1
-        folders[folder]['20160501_150030.avi'] = 0
-        self.progress.done_progress = folders
-        self.assertDictEqual(
-            self.progress.read_last_processed_folder(folder), folders[folder])
-        self.progress.done_progress = {}
-        self.assertEqual(
-            self.progress.read_last_processed_folder(folder), None)
-
     def test_save_progress_for_unfinished(self):
         """ save progress """
         folder = "record/20160501"
+        self.progress.cur_folder = folder
         folders = {}
-        folders[folder] = self.progress.init_empty(folder)
-        folders[folder]['20160501_220030.avi'] = 1
-        folders[folder]['20160501_230030.avi'] = 1
-        folders[folder]['20160501_150030.avi'] = 0
-        args = {"enc": json.dumps(folders[folder])}
+        folders = self.progress.init_empty(folder)
+        key = "files"
+        folders[key]['20160501_220030.avi'] = 1
+        folders[key]['20160501_230030.avi'] = 1
+        folders[key]['20160501_150030.avi'] = 0
+        args = {"enc": json.dumps(folders)}
 
         def mocked_open_write_file(path, writer, args):
             writer(WRITE, args)
 
         WRITE.open_write_file = umock.Mock(side_effect=mocked_open_write_file)
 
-        with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
-            result = self.progress.save_progress_for_unfinished(folder)
-            self.assertEqual(result, False)
-
         self.progress.done_progress = folders
         with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
-            result = self.progress.save_progress_for_unfinished(folder)
+            result = self.progress.save_progress_for_unfinished()
             self.assertEqual(result, True)
             self.assertEqual(WRITE.buffer, args['enc'])
