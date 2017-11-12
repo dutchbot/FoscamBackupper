@@ -1,4 +1,4 @@
-![GitHub Logo](https://travis-ci.org/dutchbot/FoscamBackupper.svg?branch=development)
+![GitHub Logo](https://travis-ci.org/dutchbot/FoscamBackupper.svg?branch=master)
 
 This little python project was created for usage with a foscam camera.  
 To list the dirs, copy them to local disk of choice .
