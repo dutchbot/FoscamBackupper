@@ -62,6 +62,8 @@ def main():
         exc = serr
         logger.warning("Failed to contact ftp server")
         logger.debug(serr.__str__())
+    except Exception as generic:
+        exc = generic
     finally:
         if worker != None and worker.progress_objects != None:
             for progress in worker.progress_objects:
