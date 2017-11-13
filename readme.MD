@@ -1,7 +1,7 @@
 ![GitHub Logo](https://travis-ci.org/dutchbot/FoscamBackupper.svg?branch=master)
 
-This little python project was created for usage with a foscam camera.  
-To list the dirs, copy them to local disk of choice .
+This project was created for usage with a foscam camera.  
+To list the dirs, copy them to local disk of choice.
 
 **Features**:
 
@@ -9,7 +9,7 @@ To list the dirs, copy them to local disk of choice .
 * Zip the files locally.
 * Delete the files locally after zipping.
 * Limit the number of files downloaded.
-* Set the output dir, default is current directory.
+* Track progress, so retries are possible.
 
 ## Set the following in settings.conf
 
@@ -23,10 +23,9 @@ model_serial:<model_serial>
 Note that the model_serial can be left as it is, the code will try to retrieve it from the ftp server.
 
 # Roadmap
-1. Fix state overall, not just for the last folder. 
-2. Show zipping / deletion progress.
-3. Add threading for zipping locally and downloading.
-4. Add option to store file sizes and compare to disk stored to determine state of file.
+1. Show zipping / deletion progress.
+2. Add threading for zipping locally and downloading.
+3. Add option to store file sizes and compare to disk stored to determine state of file.
 
 # Building for Windows
 ```

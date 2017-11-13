@@ -270,6 +270,14 @@ class Worker:
                     except ftplib.error_perm as perm:
                         if "550" in perm.__str__():
                             self.recursive_delete(fullpath, folder)
+                    except ftplib.error_temp as timeout:
+                        # cause: zipping and local deletion keep the connection idle too long.
+                        self.log_debug(timeout.__str__())
+                        self.log_info("Timeout so reopening connection right now ..")
+                        ftp_helper.close_connection(self.connection)
+                        self.connection = ftp_helper.open_connection(self.args['conf'])
+                        self.log_info("Reinitate deletion of remote folder.")
+                        self.delete_remote_folder(fullpath, folder)
                 else:
                     self.log_info("Not deleting remote folder")
                     self.set_remote_deleted(folder)
