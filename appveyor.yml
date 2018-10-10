@@ -28,6 +28,7 @@ deploy:
     artifact: "\\dist\\%DISTNAME%.exe"
     draft: false
     prerelease: false
-    auth_token: yxUm0NN7cTldOGFaMz4Wo/R4YXfthMdtD1bkUxJt2Babll+//tFrynMOUnYxkrOx
+    auth_token:
+      secure: yxUm0NN7cTldOGFaMz4Wo/R4YXfthMdtD1bkUxJt2Babll+//tFrynMOUnYxkrOx
     on:
       branch: releases
