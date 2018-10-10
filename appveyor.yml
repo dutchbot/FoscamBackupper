@@ -1,3 +1,9 @@
+# Prevent endless build
+skip_tags: true
+
+skip_commits:
+  message: /no_build/
+
 environment:
   matrix:
     - PYTHON: C:\\Python37
@@ -21,12 +27,13 @@ after_test:
 
 artifacts:
   - path: "\\dist\\%DISTNAME%.exe"
+    name: foscambackup
 
 deploy:
   - provider: GitHub
     release: v$(appveyor_build_version)-stable
-    artifact: "\\dist\\%DISTNAME%.exe"
-    draft: false
+    artifact: foscambackup
+    draft: true
     prerelease: false
     auth_token:
       secure: yxUm0NN7cTldOGFaMz4Wo/R4YXfthMdtD1bkUxJt2Babll+//tFrynMOUnYxkrOx
