@@ -1,0 +1,29 @@
+environment:
+
+  matrix:
+    - PYTHON: "C:\Python37"
+    - DISTNAME: "foscambackupper"
+
+install:
+  - "%PYTHON%\\python.exe -m pip install pyinstaller"
+  - "%PYTHON%\\python.exe -m pip install -r .\requirements.txt"
+
+build: off
+
+test_script:
+  - "%PYTHON%\\python.exe -m unittest discover"
+
+after_test:
+  - "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --name %DISTNAME%"
+
+artifacts:
+  # bdist_wheel puts your built wheel in the dist directory
+  - path: dist\%DISTNAME%.exe
+
+deploy:
+   - provider: GitHub
+    artifact: \.%DISTNAME%.exe           # upload all NuGet packages to release assets
+    draft: false
+    prerelease: false
+    on:
+      branch: releases

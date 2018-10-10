@@ -4,7 +4,7 @@ import unittest
 import unittest.mock as umock
 from io import StringIO
 
-import helper as test_helper
+from test import helper as test_helper
 import foscambackup.helper as helper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress

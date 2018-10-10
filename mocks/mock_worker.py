@@ -2,7 +2,7 @@ from foscambackup.constant import Constant
 import unittest.mock as umock
 from ftplib import FTP
 from unittest.mock import call
-import helper
+from test import helper
 
 def reset_mock():
     conn.reset_mock()
