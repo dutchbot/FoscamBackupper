@@ -6,7 +6,7 @@ environment:
 
 install:
   - "%PYTHON%\\python.exe -m pip install pyinstaller"
-  - "%PYTHON%\\python.exe -m pip install -r .\requirements.txt"
+  - "%PYTHON%\\python.exe -m pip install -r %APPVEYOR_BUILD_FOLDER%\\requirements.txt"
 
 build: off
 
@@ -22,7 +22,7 @@ artifacts:
 
 deploy:
   - provider: GitHub
-    artifact: \.%DISTNAME%.exe
+    artifact: dist\\.%DISTNAME%.exe
     draft: false
     prerelease: false
     on:
