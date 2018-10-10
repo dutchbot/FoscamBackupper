@@ -21,7 +21,7 @@ artifacts:
   - path: dist\%DISTNAME%.exe
 
 deploy:
-   - provider: GitHub
+  - provider: GitHub
     artifact: \.%DISTNAME%.exe           # upload all NuGet packages to release assets
     draft: false
     prerelease: false
