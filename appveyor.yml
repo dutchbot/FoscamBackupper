@@ -2,7 +2,8 @@ environment:
 
   matrix:
     - PYTHON: "C:\\Python37"
-    - DISTNAME: "foscambackupper"
+    - DISTNAME: "\"foscambackupper\""
+    - DISTFOLDER: "%APPVEYOR_BUILD_FOLDER%\\dist"
 
 install:
   - "%PYTHON%\\python.exe -m pip install pyinstaller"
@@ -14,15 +15,15 @@ test_script:
   - "%PYTHON%\\python.exe -m unittest discover"
 
 after_test:
-  - "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --name %DISTNAME%"
+  - "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --distpath %DISTFOLDER% --name %DISTNAME%"
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
-  - path: dist\\%DISTNAME%.exe
+  - path: "%APPVEYOR_BUILD_FOLDER%\\dist\\%DISTNAME%.exe"
 
 deploy:
   - provider: GitHub
-    artifact: dist\\.%DISTNAME%.exe
+    artifact: "%APPVEYOR_BUILD_FOLDER%\\dist\\%DISTNAME%.exe"
     draft: false
     prerelease: false
     on:
