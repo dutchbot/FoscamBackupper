@@ -16,7 +16,7 @@ test_script:
   - "%PYTHON%\\python.exe -m unittest discover"
 
 after_test:
-  - "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --workpath \"%WORKFOLDER%\"--distpath \"%DISTFOLDER%\" --name \"%DISTNAME%\""
+  - "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --workpath \"%WORKFOLDER%\" --distpath \"%DISTFOLDER%\" --name \"%DISTNAME%\""
 
 artifacts:
   - path: "%APPVEYOR_BUILD_FOLDER%\\dist\\%DISTNAME%.exe"
