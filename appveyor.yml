@@ -1,7 +1,7 @@
 environment:
 
   matrix:
-    - PYTHON: "C:\Python37"
+    - PYTHON: "C:\\Python37"
     - DISTNAME: "foscambackupper"
 
 install:
@@ -18,11 +18,11 @@ after_test:
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
-  - path: dist\%DISTNAME%.exe
+  - path: dist\\%DISTNAME%.exe
 
 deploy:
   - provider: GitHub
-    artifact: \.%DISTNAME%.exe           # upload all NuGet packages to release assets
+    artifact: \.%DISTNAME%.exe
     draft: false
     prerelease: false
     on:
