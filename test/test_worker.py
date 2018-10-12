@@ -4,7 +4,7 @@ from io import StringIO
 import unittest.mock as umock
 from unittest.mock import call
 
-import helper
+from test import helper
 from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
@@ -149,7 +149,7 @@ class TestWorker(unittest.TestCase):
                                       "remote_deleted": 0, "local_deleted": 0}}
         self.assertDictEqual(self.worker.folder_actions, verify)
 
-    #@unittest.SkipTest
+    @unittest.SkipTest
     def test_zip_local_files_folder(self):
         """ Verify correct paths are constructed while creating zipfile """
         import time
