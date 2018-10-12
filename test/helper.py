@@ -8,10 +8,6 @@ import foscambackup.helper as helper
 
 TEST_FILE_DELETION = True
 
-def retrieve_model_serial(connection):
-    """ Get the serial number """
-    return helper.retrieve_model_serial(connection)
-
 def slash():
     """ return slash in use """
     return "/"

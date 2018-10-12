@@ -2,8 +2,8 @@
 
 import os
 import logging
-import helper
 
+from foscambackup import helper
 from pyftpdlib import servers
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
