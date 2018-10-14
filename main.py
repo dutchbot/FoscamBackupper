@@ -6,12 +6,11 @@ import traceback
 import argparse
 from io import StringIO
 
-# own classes
-from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
+from foscambackup.constant import Constant
 import foscambackup.ftp_helper as ftp_helper
 from foscambackup.conf_factory import ConfFactory
-from foscambackup.constant import Constant
+from foscambackup.command_parser import CommandParser
 
 def main():
     """ Main """
@@ -58,7 +57,6 @@ def main():
     except socket.timeout as stime:
         exc = stime
         logger.warning("Failed to connect to ftp server")
-        # 421 timeout?
         logger.debug(stime.__str__())
     except socket.error as serr:
         exc = serr

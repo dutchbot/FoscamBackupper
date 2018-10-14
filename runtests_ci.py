@@ -13,4 +13,4 @@ from test.test_progress import TestProgress
 from test.test_worker import TestWorker
 TestWorker.output_path = "output-test-worker"
 
-unittest.main()
+unittest.main(verbosity=2)
