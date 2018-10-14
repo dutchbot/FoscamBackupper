@@ -1,4 +1,5 @@
 """ Holds configuration class """
+from foscambackup import helper
 from foscambackup.constant import Constant
 import foscambackup.file_helper as file_helper
 
@@ -17,8 +18,7 @@ class Conf:
         data[len(data)-1] = 'model_serial:' + self.model
         file_helper.open_write_file(Constant.file_t, Conf.write_model_serial, data)
 
-    @staticmethod
-    def write_model_serial(write_file, args):
+    def write_model_serial(self, write_file, args):
         """ Write the data to file """
         write_file.writelines(args['data'])
 

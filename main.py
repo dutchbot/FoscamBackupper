@@ -10,6 +10,8 @@ from io import StringIO
 from foscambackup.command_parser import CommandParser
 from foscambackup.worker import Worker
 import foscambackup.ftp_helper as ftp_helper
+from foscambackup.conf_factory import ConfFactory
+from foscambackup.constant import Constant
 
 def main():
     """ Main """
@@ -42,7 +44,7 @@ def main():
         handler.setLevel(logging.DEBUG)
         logger.addHandler(handler)
 
-        args['conf'] = parser.read_conf()
+        args['conf'] = ConfFactory().read_conf(Constant.file_t)
         con = ftp_helper.open_connection(args['conf'])
 
         if args['conf'].model == "<model_serial>":

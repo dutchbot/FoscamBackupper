@@ -1,4 +1,5 @@
 """ Wrapper for downloading to local file """
+import os
 import decimal
 import progressbar
 
@@ -35,7 +36,6 @@ class FileWrapper:
         """ Used when the server closed our connection during download """
         filename = self.cur_file.name
         self.cur_file.close()
-        import os
         os.remove(filename)
 
     def close_file(self):
