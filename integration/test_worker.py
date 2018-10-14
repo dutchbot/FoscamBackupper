@@ -14,13 +14,13 @@ from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
 import foscambackup.ftp_helper as ftp_helper
-import helper
+from test import helper
 
 DELETE_TESTS = True
 
 #TODO add test like we call from main.py..
 #@unittest.SkipTest
-class TestIntegrationWorker(unittest.TestCase):
+class TestWorker(unittest.TestCase):
     """ Basically an integration / system test """
     thread = None
     testserver = None
@@ -28,6 +28,7 @@ class TestIntegrationWorker(unittest.TestCase):
     conf = None
     worker = None
     connection = None
+    output_path = ""
     mode = {"wanted_files": Constant.wanted_files_record,
         "folder": Constant.record_folder, "int_mode": 0, "separator":"_"}
     mode_snap = {"wanted_files": Constant.wanted_files_snap,
@@ -35,7 +36,7 @@ class TestIntegrationWorker(unittest.TestCase):
 
     def setUp(self):
         args = helper.get_args_obj()
-        args["output_path"] = TestIntegrationWorker.output_path
+        args["output_path"] = TestWorker.output_path
         helper.mock_dir(self.conf)
         helper.mock_dir_offset_subdir(self.conf)
         helper.mock_dir_offset_parentdir(self.conf)
@@ -49,20 +50,20 @@ class TestIntegrationWorker(unittest.TestCase):
     @staticmethod
     def setUpClass():
         #helper.log_to_stdout('Worker')
-        TestIntegrationWorker.conf =  helper.read_conf()
-        TestIntegrationWorker.testserver = mock_server.MockFTPServer()
-        TestIntegrationWorker.thread = Thread(
-            target=TestIntegrationWorker.testserver.start_ftp_server, args=(TestIntegrationWorker.conf, ))
-        TestIntegrationWorker.thread.start()
-        while not TestIntegrationWorker.testserver.is_running():
+        TestWorker.conf =  helper.read_conf()
+        TestWorker.testserver = mock_server.MockFTPServer()
+        TestWorker.thread = Thread(
+            target=TestWorker.testserver.start_ftp_server, args=(TestWorker.conf, ))
+        TestWorker.thread.start()
+        while not TestWorker.testserver.is_running():
             time.sleep(0.2)
 
     @staticmethod
     def tearDownClass():
-        TestIntegrationWorker.testserver.close()
-        TestIntegrationWorker.testserver.cleanup_remote_directory()
-        helper.cleanup_directories(TestIntegrationWorker.output_path)
-        TestIntegrationWorker.thread.join()
+        TestWorker.testserver.close()
+        TestWorker.testserver.cleanup_remote_directory()
+        helper.cleanup_directories(TestWorker.output_path)
+        TestWorker.thread.join()
 
     #@unittest.SkipTest
     def test_connection(self):

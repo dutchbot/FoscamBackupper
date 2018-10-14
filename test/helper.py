@@ -8,10 +8,6 @@ import foscambackup.helper as helper
 
 TEST_FILE_DELETION = True
 
-def retrieve_model_serial(connection):
-    """ Get the serial number """
-    return helper.retrieve_model_serial(connection)
-
 def slash():
     """ return slash in use """
     return "/"
@@ -281,21 +277,10 @@ def get_args_obj():
 
 def read_conf():
     """ Read conf and create conf object """
-    file_conf = "test.conf"
     conf = Conf()
-    with open(file_conf) as file_contents:
-        content = file_contents.readlines()
-        for keyvalue in content:
-            split = keyvalue.split(":", 1)
-            split[1] = split[1].rstrip()
-            if split[0] == "host":
-                conf.host = split[1]
-            elif split[0] == "port":
-                conf.port = int(split[1])
-            elif split[0] == "username":
-                conf.username = split[1]
-            elif split[0] == "password":
-                conf.password = split[1]
-            elif split[0] == "model_serial":
-                conf.model = split[1]
+    conf.host = os.environ['config_host']
+    conf.port = int(os.environ['config_port'])
+    conf.username = os.environ['config_username']
+    conf.password = os.environ['config_password']
+    conf.model = os.environ['config_model_serial']
     return conf

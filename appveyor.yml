@@ -25,7 +25,7 @@
   build: off
 
   test_script:
-    - cmd: "%PYTHON%\\python.exe -m unittest discover"
+    - cmd: "%PYTHON%\\python.exe -m run_tests.py"
 
   after_test:
     - cmd: "%PYTHON%\\Scripts\\pyinstaller.exe main.py --noconfirm --onefile --exclude test --workpath %WORKFOLDER% --specpath %WORKFOLDER% --distpath %DISTFOLDER% --name %DISTNAME%"

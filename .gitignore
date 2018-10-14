@@ -4,7 +4,7 @@ previous_state.json
 state.log
 .vscode
 
-# ignore files in current dir
+# ignore test files in current dir
 snap
 record
 
@@ -20,3 +20,7 @@ __pycache__
 dist
 build
 *.spec
+
+# ignore local dev helpers
+.coverage
+test_env.ps1
