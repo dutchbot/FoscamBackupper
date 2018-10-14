@@ -279,7 +279,7 @@ def read_conf():
     """ Read conf and create conf object """
     conf = Conf()
     conf.host = os.environ['config_host']
-    conf.port = os.environ['config_port']
+    conf.port = int(os.environ['config_port'])
     conf.username = os.environ['config_username']
     conf.password = os.environ['config_password']
     conf.model = os.environ['config_model_serial']
