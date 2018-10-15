@@ -1,6 +1,6 @@
 
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
+import foscambackup.util.helper as helper
 from ftplib import error_perm
 
 

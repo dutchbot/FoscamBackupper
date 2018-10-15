@@ -4,11 +4,11 @@ import unittest
 import unittest.mock as umock
 from io import StringIO
 
-from test import helper as test_helper
-import foscambackup.helper as helper
+from test.util import helper as test_helper
+import foscambackup.util.helper as helper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
-from mocks import mock_file_helper
+from test.mocks import mock_file_helper
 
 
 APPEND = mock_file_helper.APPEND
@@ -129,7 +129,7 @@ class TestProgress(unittest.TestCase):
         foldername = "record/20160501"
         done_progress = {"done": 1, "path": foldername, "files": {}}
         self.progress.done_progress = done_progress
-        with umock.patch('foscambackup.file_helper.open_appendonly_file', APPEND):
+        with umock.patch('foscambackup.util.file_helper.open_appendonly_file', APPEND):
             self.progress.write_done_folder(foldername)
         self.assertEqual(self.progress.done_progress, done_progress)
 
@@ -182,7 +182,7 @@ class TestProgress(unittest.TestCase):
         WRITE.open_write_file = umock.Mock(side_effect=mocked_open_write_file)
 
         self.progress.done_progress = folders
-        with umock.patch('foscambackup.file_helper.open_write_file', WRITE.open_write_file):
+        with umock.patch('foscambackup.util.file_helper.open_write_file', WRITE.open_write_file):
             result = self.progress.save_progress_for_unfinished()
             self.assertEqual(result, True)
             self.assertEqual(WRITE.buffer, args['enc'])

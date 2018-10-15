@@ -4,14 +4,14 @@ from io import StringIO
 import unittest.mock as umock
 from unittest.mock import call
 
-from test import helper
-from foscambackup.conf import Conf
+import test.util.helper as helper
+from foscambackup.config import Config
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
-from mocks import mock_worker
-from mocks import mock_ftp
-from mocks import mock_file_helper
+from test.mocks import mock_worker
+from test.mocks import mock_ftp
+from test.mocks import mock_file_helper
 
 MODE_RECORD = {"wanted_files": Constant.wanted_files_record,
                "folder": Constant.record_folder, "int_mode": 0, 'separator': '_'}
@@ -30,7 +30,7 @@ class TestWorker(unittest.TestCase):
     def setUp(self):
         mock_worker.reset_mock()
         self.args = helper.get_args_obj()
-        self.args['conf'] = Conf()
+        self.args['conf'] = Config()
         self.worker = Worker(mock_worker.conn, self.args)
         #helper.log_to_stdout('Worker', 'info')
 
@@ -104,8 +104,8 @@ class TestWorker(unittest.TestCase):
             return ""
 
         def download_file(loc_info):
-            import foscambackup.helper
-            foscambackup.helper.verify_path(
+            import foscambackup.util.helper
+            foscambackup.util.helper.verify_path(
                 loc_info['abs_path'], loc_info['mode'])
             return True
         download = umock.MagicMock()
@@ -121,8 +121,8 @@ class TestWorker(unittest.TestCase):
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
                 umock.patch("os.makedirs", osmakedirs), \
                 umock.patch("os.path.isfile", osmakedirs), \
-                umock.patch("foscambackup.file_helper.open_readonly_file", mock_open), \
-                umock.patch("foscambackup.file_helper.open_appendonly_file", mock_file_helper.APPEND):
+                umock.patch("foscambackup.util.file_helper.open_readonly_file", mock_open), \
+                umock.patch("foscambackup.util.file_helper.open_appendonly_file", mock_file_helper.APPEND):
             # RECORDING
             file_handle = bytes(
                 helper.get_current_date_time_rounded(), 'ascii')
@@ -190,7 +190,7 @@ class TestWorker(unittest.TestCase):
             def __enter__(self):
                 return read
 
-            def __exit__(self):
+            def __exit__(self, exc_type, exc_value, tb):
                 pass
         ospath_listdir = umock.MagicMock(side_effect=listdir)
         ospath_exists = umock.MagicMock(side_effect=exist)
@@ -252,7 +252,7 @@ class TestWorker(unittest.TestCase):
         fullpath = "/output/record/20170101"
         folder = "record/20170101"
         self.worker.init_zip_folder(folder)  # important
-        with umock.patch("foscambackup.helper.cleanup_directories", m_helper):
+        with umock.patch("foscambackup.util.helper.cleanup_directories", m_helper):
             self.worker.delete_local_folder(fullpath, folder)
 
         verify = {folder: {"zipped": 0, "remote_deleted": 0, "local_deleted": 1}}
@@ -391,7 +391,7 @@ class TestWorker(unittest.TestCase):
         delete = umock.Mock(side_effect=delete)
         verify_delete = [call({'action_key': 'local_deleted', 'arg_key': 'delete_local_f', 'folder': 'record/20170101', 'fullpath': '/record/20170101'}, self.worker.delete_local_folder),
                          call({'action_key': 'remote_deleted', 'arg_key': 'delete_rm', 'folder': 'record/20170101', 'fullpath': '/IPCamera/FXXXXX_CEEEEEEEEEEE/record/20170101'}, self.worker.delete_remote_folder)]
-        with umock.patch("foscambackup.helper.clean_folder_path", clean), \
+        with umock.patch("foscambackup.util.helper.clean_folder_path", clean), \
                 umock.patch("foscambackup.worker.Worker.check_folder_state_delete", delete):
             self.worker.init_zip_folder(folder)
             with self.assertRaises(ValueError):

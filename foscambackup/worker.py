@@ -12,9 +12,9 @@ from zipfile import ZIP_LZMA
 from foscambackup.file_wrapper import FileWrapper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
-import foscambackup.helper as helper
-import foscambackup.ftp_helper as ftp_helper
-import foscambackup.file_helper as file_helper
+import foscambackup.util.helper as helper
+import foscambackup.util.ftp_helper as ftp_helper
+import foscambackup.util.file_helper as file_helper
 
 class Worker:
     """ Retrieves files for us """

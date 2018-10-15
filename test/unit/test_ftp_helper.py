@@ -2,8 +2,8 @@
 import copy
 import unittest
 import unittest.mock as umock
-from mocks import mock_worker
-import foscambackup.ftp_helper as ftp_helper
+from test.mocks import mock_worker
+import foscambackup.util.ftp_helper as ftp_helper
 
 
 CONN = copy.deepcopy(mock_worker.conn) # Fix for reusing static conn
@@ -31,9 +31,9 @@ class TestFtpHelper(unittest.TestCase):
         conf = umock.MagicMock(host="127.0.0.1", port=21,
                                username="test", password="abc@123")
 
-        with umock.patch('foscambackup.ftp_helper.FTP.set_pasv', CONN.set_pasv), \
-                umock.patch('foscambackup.ftp_helper.FTP.connect', CONN.connect), \
-                umock.patch('foscambackup.ftp_helper.FTP.login', CONN.login):
+        with umock.patch('foscambackup.util.ftp_helper.FTP.set_pasv', CONN.set_pasv), \
+                umock.patch('foscambackup.util.ftp_helper.FTP.connect', CONN.connect), \
+                umock.patch('foscambackup.util.ftp_helper.FTP.login', CONN.login):
             ftp_helper.open_connection(conf)
 
         self.assertEqual(CONN.set_pasv.call_args_list, [call(False)])

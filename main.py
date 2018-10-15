@@ -8,8 +8,8 @@ from io import StringIO
 
 from foscambackup.worker import Worker
 from foscambackup.constant import Constant
-import foscambackup.ftp_helper as ftp_helper
-from foscambackup.conf_factory import ConfFactory
+import foscambackup.util.ftp_helper as ftp_helper
+from foscambackup.conf_factory import ConfigFactory
 from foscambackup.command_parser import CommandParser
 
 def main():
@@ -43,7 +43,7 @@ def main():
         handler.setLevel(logging.DEBUG)
         logger.addHandler(handler)
 
-        args['conf'] = ConfFactory().read_conf(Constant.file_t)
+        args['conf'] = ConfigFactory().read_conf(Constant.file_t)
         con = ftp_helper.open_connection(args['conf'])
 
         if args['conf'].model == "<model_serial>":

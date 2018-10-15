@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 
 import os
 import logging
 
-from foscambackup import helper
+import foscambackup.util.helper as helper
 from pyftpdlib import servers
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler

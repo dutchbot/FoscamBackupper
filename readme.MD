@@ -23,18 +23,3 @@ model_serial:<model_serial>
 ```
 Note that the model_serial can be left as it is, the code will try to retrieve it from the ftp server.
 
-# Roadmap
-1. Show zipping / deletion progress.
-2. Add threading for zipping locally and downloading.
-3. Add option to store file sizes and compare to disk stored to determine state of file.
-
-# Building for Windows
-```
-pip install pyinstaller
-pyinstaller.exe main.py --noconfirm --onefile --exclude test
-```
-
-# exec test
-
-`python test\runtests_local.py`
-
