@@ -3,8 +3,8 @@ import sys
 import time
 import logging
 from foscambackup.constant import Constant
-from foscambackup.conf import Conf
-import foscambackup.helper as helper
+from foscambackup.config import Config
+import foscambackup.util.helper as helper
 
 TEST_FILE_DELETION = True
 
@@ -277,7 +277,7 @@ def get_args_obj():
 
 def read_conf():
     """ Read conf and create conf object """
-    conf = Conf()
+    conf = Config()
     conf.host = os.environ['config_host']
     conf.port = int(os.environ['config_port'])
     conf.username = os.environ['config_username']

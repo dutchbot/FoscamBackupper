@@ -1,6 +1,6 @@
 import unittest
 import unittest.mock as umock
-import foscambackup.file_helper as file_helper
+import foscambackup.util.file_helper as file_helper
 from test.mocks import mock_file_helper
 from io import StringIO
 

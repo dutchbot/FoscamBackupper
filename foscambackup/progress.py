@@ -1,10 +1,11 @@
 """ Track progress of downloading etc """
+import os
 import json
 import logging
 
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
-import foscambackup.file_helper as file_helper
+import foscambackup.util.helper as helper
+import foscambackup.util.file_helper as file_helper
 
 class Progress:
     """ Track progress """
@@ -135,7 +136,6 @@ class Progress:
         enc = json.dumps(self.done_progress)
         path = self.construct_state_file_path()
         args = {'enc':enc}
-        import os
         if os.path.isfile(path):
             os.remove(path)
         file_helper.open_write_file(path, self.write_progress_folder, args)

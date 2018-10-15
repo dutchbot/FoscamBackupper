@@ -1,13 +1,13 @@
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
-from foscambackup.conf import Conf
+import foscambackup.util.helper as helper
+from foscambackup.config import Config
 
-class ConfFactory:
+class ConfigFactory:
 
     def read_conf(self, file_path):
         """ Read config to conf object """
         file_conf = file_path
-        conf = Conf()
+        conf = Config()
         with open(file_conf) as filename:
             content = filename.readlines()
             for keyvalue in content:

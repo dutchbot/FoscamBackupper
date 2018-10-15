@@ -1,8 +1,8 @@
 """ Parse commands for the program """
 import argparse
-from foscambackup.conf import Conf
+from foscambackup.config import Config
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
+import foscambackup.util.helper as helper
 
 
 class CommandParser:

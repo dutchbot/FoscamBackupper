@@ -1,5 +1,5 @@
 
-import foscambackup.helper as helper
+import foscambackup.util.helper as helper
 import unittest
 import unittest.mock as umock
 import time
@@ -59,7 +59,7 @@ class TestHelper(unittest.TestCase):
         shutil.rmtree = umock.MagicMock(side_effect=rmtree)
         shutil.on_error = umock.MagicMock()
         with umock.patch("shutil.rmtree", shutil.rmtree), \
-                umock.patch("foscambackup.helper.on_error", shutil.on_error):
+                umock.patch("foscambackup.util.helper.on_error", shutil.on_error):
             helper.cleanup_directories("testfolder")
         calls = [umock.call.rmtree(
             'testfolder', ignore_errors=False, onerror=shutil.on_error)]

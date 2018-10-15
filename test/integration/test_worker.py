@@ -9,11 +9,11 @@ from ftplib import error_perm
 from threading import Thread
 
 from test.mocks import mock_server
-from foscambackup.conf import Conf
+from foscambackup.config import Config
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
-import foscambackup.ftp_helper as ftp_helper
+import foscambackup.util.ftp_helper as ftp_helper
 from test.util import helper
 
 DELETE_TESTS = True

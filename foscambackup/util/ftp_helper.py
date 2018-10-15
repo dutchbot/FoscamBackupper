@@ -1,7 +1,7 @@
 """ Contains functions for ftp interaction """
 from ftplib import FTP
 from foscambackup.constant import Constant
-import foscambackup.helper as helper
+import foscambackup.util.helper as helper
 
 def close_connection(connection):
     """ Close the FTP connection """
