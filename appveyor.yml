@@ -6,6 +6,8 @@
   # Prevent endless build
   skip_tags: true
 
+  skip_branch_with_pr: true
+  
   skip_commits:
     message: /no_build/
 
