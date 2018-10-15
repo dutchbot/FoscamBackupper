@@ -3,6 +3,8 @@ import os
 import sys
 import unittest
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from test.integration.test_worker import TestWorker as TestIntegrationWorker
 from test.unit.test_file_wrapper import TestFileWrapper
 from test.unit.test_file_helper import TestFileHelper
