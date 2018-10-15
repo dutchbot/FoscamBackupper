@@ -4,7 +4,6 @@ from foscambackup.config import Config
 from foscambackup.constant import Constant
 import foscambackup.util.helper as helper
 
-
 class CommandParser:
     """ Parse commands and read config file """
     @staticmethod

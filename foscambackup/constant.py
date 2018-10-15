@@ -1,4 +1,5 @@
 """ Constant """
+
 class Constant:
     """ Contains constant """
     base_folder = "IPCamera"

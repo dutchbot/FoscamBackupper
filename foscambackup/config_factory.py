@@ -3,12 +3,11 @@ import foscambackup.util.helper as helper
 from foscambackup.config import Config
 
 class ConfigFactory:
-
+    """ Create a config model """
     def read_conf(self, file_path):
         """ Read config to conf object """
-        file_conf = file_path
         conf = Config()
-        with open(file_conf) as filename:
+        with open(file_path) as filename:
             content = filename.readlines()
             for keyvalue in content:
                 split = keyvalue.split(":", 1)

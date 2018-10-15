@@ -135,15 +135,15 @@ def generate_date_folders_remote(path, cur_date_call, call):
 def generate_mocked_record_file(path, offset=0):
     """ create mocked avi file """
     file_content = get_rand_bytes((1024) * 10)  # 10KB file
-    fname = get_current_date_time_offset(offset) + ".avi"
-    fname_path = path + fname
-    if not os.path.isfile(fname_path):
+    file_name = get_current_date_time_offset(offset) + ".avi"
+    file_path = path + file_name
+    if not os.path.isfile(file_path):
         try:
-            with open(fname_path, "wb") as filename:
-                filename.write(file_content)
+            with open(file_path, "wb") as record_file:
+                record_file.write(file_content)
         finally:
-            filename.close()
-    return fname
+            record_file.close()
+    return file_name
 
 def on_error(func, path, exc_info):
     """ Callback function for OS errors when deleting a folder tree """
@@ -155,14 +155,14 @@ def on_error(func, path, exc_info):
 def generate_mocked_snap_file(path):
     """ create mocked jpg file """
     file_content = get_rand_bytes((1024) * 2)  # 2 KB file
-    fname = get_current_date_time("-") + ".jpg"
-    fname = path + fname
-    if not os.path.isfile(fname):
+    file_path = get_current_date_time("-") + ".jpg"
+    file_path = path + file_path
+    if not os.path.isfile(file_path):
         try:
-            with open(fname, "wb") as filename:
-                filename.write(file_content)
+            with open(file_path, "wb") as snap_file:
+                snap_file.write(file_content)
         finally:
-            filename.close()
+            snap_file.close()
 
 def get_rand_bytes(size):
     """ Random bytes """
@@ -235,9 +235,9 @@ def mock_dir(conf):
     new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded('-'))
     generate_mocked_snap_file(new_path + slash())
 
-    sdrecpath = Constant.base_folder+slash()+Constant.sd_rec
+    sdrec_file_path = Constant.base_folder+slash()+Constant.sd_rec
     if os.path.isfile(Constant.base_folder+slash()+Constant.sd_rec):
-        with open(sdrecpath, 'w') as file:
+        with open(sdrec_file_path, 'w') as file:
             file.write(get_current_date())
         file.close()
 

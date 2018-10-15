@@ -5,7 +5,7 @@ from unittest.mock import call
 
 import progressbar
 
-from foscambackup.file_wrapper import FileWrapper
+from foscambackup.download_file_tracker import DownloadFileTracker
 from test.mocks import mock_file_helper
 
 WRITE = mock_file_helper.WRITE
@@ -17,14 +17,14 @@ class TestFileWrapper(unittest.TestCase):
         test_file = "12345.avi"
         self.byte_size = 266613824
         with umock.patch("builtins.open", WRITE):
-            self.wrapper = FileWrapper(test_file, self.byte_size)
+            self.wrapper = DownloadFileTracker(test_file, self.byte_size)
 
     def tearDown(self):
         WRITE.reset_mock()
 
     def test_file_wrap_init(self):
         """ Verify class vars are initialized """
-        self.assertIsInstance(self.wrapper.cur_file, umock.MagicMock)
+        self.assertIsInstance(self.wrapper.local_file, umock.MagicMock)
         self.assertEqual(self.wrapper.total_size, self.byte_size)
         self.assertEqual(self.wrapper.downloaded_bytes, 0)
         self.assertIsInstance(self.wrapper.progressbar, progressbar.ProgressBar)
@@ -35,7 +35,7 @@ class TestFileWrapper(unittest.TestCase):
             pass
         mock_update = umock.MagicMock(side_effect=update)
         writing = '123456'
-        with umock.patch("foscambackup.file_wrapper.FileWrapper.update_progress", mock_update):
+        with umock.patch("foscambackup.download_file_tracker.DownloadFileTracker.update_progress", mock_update):
             self.wrapper.write_to_file(writing)
             self.assertListEqual(mock_update.call_args_list, [call(len(writing))])
             self.assertListEqual(WRITE.call_args_list, [call('12345.avi', 'w+b')])
@@ -59,4 +59,4 @@ class TestFileWrapper(unittest.TestCase):
         """ Test if close function is called """
         WRITE.close = umock.MagicMock()
         self.wrapper.close_file()
-        self.assertEqual(self.wrapper.cur_file.close.call_args_list,[call()])
+        self.assertEqual(self.wrapper.local_file.close.call_args_list,[call()])
