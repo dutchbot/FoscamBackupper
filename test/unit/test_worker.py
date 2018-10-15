@@ -4,14 +4,14 @@ from io import StringIO
 import unittest.mock as umock
 from unittest.mock import call
 
-from test import helper
+import test.util.helper as helper
 from foscambackup.conf import Conf
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 from foscambackup.worker import Worker
-from mocks import mock_worker
-from mocks import mock_ftp
-from mocks import mock_file_helper
+from test.mocks import mock_worker
+from test.mocks import mock_ftp
+from test.mocks import mock_file_helper
 
 MODE_RECORD = {"wanted_files": Constant.wanted_files_record,
                "folder": Constant.record_folder, "int_mode": 0, 'separator': '_'}
@@ -190,7 +190,7 @@ class TestWorker(unittest.TestCase):
             def __enter__(self):
                 return read
 
-            def __exit__(self):
+            def __exit__(self, exc_type, exc_value, tb):
                 pass
         ospath_listdir = umock.MagicMock(side_effect=listdir)
         ospath_exists = umock.MagicMock(side_effect=exist)

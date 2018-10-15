@@ -6,7 +6,7 @@ from unittest.mock import call
 import progressbar
 
 from foscambackup.file_wrapper import FileWrapper
-from mocks import mock_file_helper
+from test.mocks import mock_file_helper
 
 WRITE = mock_file_helper.WRITE
 WRITE.return_value = WRITE

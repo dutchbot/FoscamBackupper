@@ -4,11 +4,11 @@ import unittest
 import unittest.mock as umock
 from io import StringIO
 
-from test import helper as test_helper
+from test.util import helper as test_helper
 import foscambackup.helper as helper
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
-from mocks import mock_file_helper
+from test.mocks import mock_file_helper
 
 
 APPEND = mock_file_helper.APPEND

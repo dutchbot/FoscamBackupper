@@ -2,7 +2,7 @@
 import copy
 import unittest
 import unittest.mock as umock
-from mocks import mock_worker
+from test.mocks import mock_worker
 import foscambackup.ftp_helper as ftp_helper
 
 
