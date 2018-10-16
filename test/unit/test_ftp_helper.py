@@ -64,7 +64,7 @@ class TestFtpHelper(unittest.TestCase):
     def test_mlsd(self):
         def mlsd(*args, **kwargs):
             yield (".", {'type':'folder'})
-            yield (".", {'type':'folder'})
+            yield ("..", {'type':'folder'})
             if(args[0] != ""):
                 yield ("record", {'type':'folder'})
                 yield ("snap", {'type':'folder'})
@@ -75,6 +75,10 @@ class TestFtpHelper(unittest.TestCase):
         self.assertListEqual(result, [("record", {'type':'folder'}), ("snap", {'type':'folder'})])
         result = ftp_helper.mlsd(CONN, "")
         self.assertListEqual(result, [])
+        with self.assertRaises(ValueError):
+            mlsdmock = umock.MagicMock()
+            mlsdmock.mlsd = umock.MagicMock(return_value=None)
+            ftp_helper.mlsd(mlsdmock, "empty")
 
     def test_retr(self):
         def caller(bin_file):
