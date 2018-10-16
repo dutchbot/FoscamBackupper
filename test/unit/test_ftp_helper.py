@@ -49,7 +49,11 @@ class TestFtpHelper(unittest.TestCase):
         self.assertEqual(CONN.sendcmd.call_args_list, [call(fullpath)])
 
     def test_retrieve_model_serial(self):
-        pass
+        dirname = "FXXX_CXX"
+        mlsd = umock.MagicMock(return_value=[(".", "664"), ("..", "664"), (dirname, "664")])
+        with umock.patch("foscambackup.util.ftp_helper.mlsd", mlsd):
+            result = ftp_helper.retrieve_model_serial(umock.MagicMock())
+            self.assertEqual(result, dirname)       
 
     def test_select_folder(self):
         compare = "CWD /IPCamera"

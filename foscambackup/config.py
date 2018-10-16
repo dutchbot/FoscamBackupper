@@ -12,6 +12,12 @@ class Config:
     model = ""
     currently_recording = False
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, other): 
+        return self.__dict__ == other.__dict__
+
     def get_model_serial(self, read_file):
         """ get the model serial from file """
         data = read_file.readlines()

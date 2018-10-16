@@ -14,10 +14,11 @@ WRITE.return_value = WRITE
 class TestFileWrapper(unittest.TestCase):
 
     def setUp(self):
-        test_file = "12345.avi"
+        self.test_file = "12345.avi"
+        WRITE.name = self.test_file
         self.byte_size = 266613824
         with umock.patch("builtins.open", WRITE):
-            self.wrapper = DownloadFileTracker(test_file, self.byte_size)
+            self.wrapper = DownloadFileTracker(self.test_file, self.byte_size)
 
     def tearDown(self):
         WRITE.reset_mock()
@@ -55,6 +56,16 @@ class TestFileWrapper(unittest.TestCase):
         self.assertEqual(self.wrapper.downloaded_bytes, self.wrapper.total_size)
         self.assertEqual(self.wrapper.progressbar.data()['percentage'], 100.00)
 
+    def test_delete_file(self):
+        """ Test for closing and removing file """
+        WRITE.remove = umock.MagicMock()
+        WRITE.close = umock.MagicMock()
+
+        with umock.patch("os.remove", WRITE.remove):
+            self.wrapper.delete_file()
+        
+        self.assertEqual(WRITE.remove.call_args, call(self.test_file))
+    
     def test_close_file(self):
         """ Test if close function is called """
         WRITE.close = umock.MagicMock()

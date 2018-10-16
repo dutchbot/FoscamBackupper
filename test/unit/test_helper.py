@@ -101,6 +101,8 @@ class TestHelper(unittest.TestCase):
     def test_construct_path(self):
         self.assertEqual(helper.construct_path("test",['mytest','ofc']), "test/mytest/ofc")
         self.assertEqual(helper.construct_path("test",['mytest','ofc'], True), "test/mytest/ofc/")
+        with self.assertRaises(TypeError):
+            helper.construct_path("test",{'mytest','ofc'})
 
     def test_check_valid_folderkey(self):
         folder = "record/20160501"
