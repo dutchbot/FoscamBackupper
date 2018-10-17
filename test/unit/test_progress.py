@@ -199,9 +199,18 @@ class TestProgress(unittest.TestCase):
             writer(WRITE, args)
 
         WRITE.open_write_file = umock.Mock(side_effect=mocked_open_write_file)
+        os = umock.MagicMock()
+        os.path = umock.MagicMock()
+        os.path.isfile = umock.MagicMock(return_value=True)
+        os.remove = umock.MagicMock()
 
         self.progress.done_progress = folders
-        with umock.patch('foscambackup.util.file_helper.open_write_file', WRITE.open_write_file):
-            result = self.progress.save_progress_for_unfinished()
-            self.assertEqual(result, True)
-            self.assertEqual(WRITE.buffer, args['enc'])
+        with umock.patch('foscambackup.util.file_helper.open_write_file', WRITE.open_write_file), \
+            umock.patch("os.path.isfile", os.path.isfile), \
+            umock.patch("os.remove", os.remove):
+                result = self.progress.save_progress_for_unfinished()
+                self.assertEqual(result, True)
+                self.assertEqual(WRITE.buffer, args['enc'])
+                self.assertEqual(os.path.isfile.call_count, 1)
+                self.assertEqual(os.remove.call_count, 1)
+

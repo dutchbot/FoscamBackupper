@@ -69,29 +69,15 @@ class Progress:
 
     def add_file_init(self, filename):
         """ Add file to init key """
-        try:
-            if self.done_progress is None:
-                self.initialize_done_progress()
-            self.done_progress["files"][filename] = 0
-        except KeyError:
-            self.logger.debug("Filename: " + filename)
+        if self.done_progress is None:
             self.initialize_done_progress()
-            self.done_progress["files"][filename] = 0
+        self.done_progress["files"][filename] = 0
 
     def add_file_done(self, folderpath, filename):
         """ Add file to done list """
         self.logger.debug("Adding file to DONE " + filename)
-        try:
-            self.done_progress["files"][filename] = 1
-            self.done_files += 1
-        except KeyError:
-            try:
-                self.initialize_done_progress(folderpath)
-                self.done_progress["files"][filename] = 1
-                self.done_files += 1
-            except KeyError as ex:
-                self.logger.warning("Key error file_done: " + ex.__str__())
-                self.logger.debug(self.done_progress)
+        self.done_progress["files"][filename] = 1
+        self.done_files += 1
 
     def init_empty(self, folder=""):
         """ Init empty folder """
