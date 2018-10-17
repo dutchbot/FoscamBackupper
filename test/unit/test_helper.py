@@ -50,7 +50,7 @@ class TestHelper(unittest.TestCase):
             helper.cleanup_directories("testfolder")
         self.assertEqual(shutil.called, True)
 
-    def test_on_error(self):
+    def test_cleanup_directories_with_error(self):
         def rmtree(*args, **kwargs):
             """ mocked """
             return args
@@ -64,6 +64,14 @@ class TestHelper(unittest.TestCase):
         calls = [umock.call.rmtree(
             'testfolder', ignore_errors=False, onerror=shutil.on_error)]
         self.assertListEqual(shutil.method_calls, calls)
+
+    def test_on_error(self):
+        logger = umock.MagicMock()
+        logger.error = umock.MagicMock()
+        with umock.patch("foscambackup.util.helper.logger", logger):
+            helper.on_error("test","C:\\","bleh")
+            calls = [umock.call.error("test"), umock.call.error("C:\\"), umock.call.error("bleh")]
+            self.assertListEqual(logger.method_calls, calls)
 
     def test_clean_newline_char(self):
         val = "test\n"
