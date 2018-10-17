@@ -28,6 +28,10 @@ class TestProgress(unittest.TestCase):
         APPEND.buffer = ""
         WRITE.buffer = ""
 
+    def test_progress__init__(self):
+        with self.assertRaises(ValueError):
+            Progress(["mock/me"])
+
     def test_load_and_init(self):
         """ Test the load function"""
         read_file = READ_STATE.read()
@@ -65,6 +69,21 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.is_max_files_reached(), False)
         self.progress.max_files = 4
         self.assertEqual(self.progress.is_max_files_reached(), False)
+
+    def test_add_file_init_given_empty_done_progress(self):
+        # Arrange
+        self.progress.done_progress = None
+        def init_done_progress(*args, **kwargs):
+            self.progress.done_progress = {"files":{}}
+        initialize_done_progress = umock.MagicMock(side_effect=init_done_progress)
+        filename = "12345.avi"
+
+        # Act
+        with umock.patch("foscambackup.progress.Progress.initialize_done_progress", initialize_done_progress):
+            self.progress.add_file_init(filename)
+
+        # Assert
+        self.assertEqual(initialize_done_progress.call_count, 1)
 
     def test_add_file_init(self):
         filename = "avi2345.avi"
