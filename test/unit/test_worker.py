@@ -110,6 +110,28 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(mock_worker.conn.method_calls,
                              calls, "Called check_currently_recording")
 
+    def test_get_files_mode_arguments(self):
+        """  Test that the proper code paths are used """
+        result = []
+
+        def get_footage(*args, **kwargs):
+            result.append(args[0])
+
+        def check_done_folders(*args, **kwargs):
+            return True
+
+        mocked_footage = umock.MagicMock(side_effect=get_footage)
+        check_done = umock.MagicMock(side_effect=check_done_folders)
+
+        with umock.patch('foscambackup.worker.Worker.get_footage', mocked_footage), \
+                umock.patch('foscambackup.worker.Worker.check_folder_done', check_done):
+            self.worker.args['mode'] = 'record'
+            self.worker.get_files()
+            self.assertDictEqual(result[0], MODE_RECORD)
+            self.worker.args['mode'] = 'snap'
+            self.worker.get_files()
+            self.assertDictEqual(result[1], MODE_SNAP)
+
     def test_get_footage(self):
         self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
 
