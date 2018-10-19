@@ -19,7 +19,7 @@ from test.util import helper
 DELETE_TESTS = True
 
 #TODO add test like we call from main.py..
-#@unittest.SkipTest
+
 class TestWorker(unittest.TestCase):
     """ Basically an integration / system test """
     thread = None
@@ -65,13 +65,13 @@ class TestWorker(unittest.TestCase):
         helper.cleanup_directories(TestWorker.output_path)
         TestWorker.thread.join()
 
-    #@unittest.SkipTest
+    
     def test_connection(self):
         """ Test for welcome message """
         self.init_worker()
         self.assertNotEqual(self.connection.getwelcome(), None)
 
-    #@unittest.SkipTest
+    
     def test_delete_file(self):
         """ Verify that we can delete a file remotely """
         self.init_worker()
@@ -88,7 +88,7 @@ class TestWorker(unittest.TestCase):
         after_dirs = self.connection.mlsd(facts=['type'])
         self.assertGreater(count_dir, len(list(after_dirs)))
 
-    #@unittest.SkipTest
+    
     def test_retrieve_dir_contents(self):
         """ Get a list of files """
         #todo replace with functions used in worker
@@ -98,7 +98,7 @@ class TestWorker(unittest.TestCase):
         else:
             assert False
 
-    #@unittest.SkipTest
+    
     def test_download_output_path(self):
         """ Verify that we can retrieve and write a file to a specific directory """
         time.sleep(2)
@@ -123,7 +123,7 @@ class TestWorker(unittest.TestCase):
         else:
             assert False
 
-    #@unittest.SkipTest
+    
     def test_worker_recorded_footage_download(self):
         """ Test that we can download recorded footage """
         self.init_worker()
@@ -135,7 +135,7 @@ class TestWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_file_count(verify_path, filenames)
 
-    #@unittest.SkipTest
+    
     def test_worker_recorded_footage_download_delete_local(self):
         """ Test that we can delete local folder """
         self.args["dry_run"] = False
@@ -150,7 +150,7 @@ class TestWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_files_deleted(verify_path, filenames)
 
-    #@unittest.SkipTest
+    
     def test_worker_snap_footage_download(self):
         """ Test that we can download snapshot footage """
         self.init_worker()
@@ -162,7 +162,7 @@ class TestWorker(unittest.TestCase):
         verify_path = helper.construct_path(self.args['output_path'], [folder, parent_dir])
         helper.verify_file_count(verify_path, filenames)
 
-    #@unittest.SkipTest
+    
     def test_worker_snapandrecorded_footage_download(self):
         """ Test our main entry point for downloading both types of footage """
         self.init_worker()
@@ -178,7 +178,7 @@ class TestWorker(unittest.TestCase):
         helper.verify_file_count(verify_path_snap, filenames_snap)
         helper.verify_file_count(verify_path_record, filenames_record)
 
-    #@unittest.SkipTest
+    
     def test_worker_remote_delete(self):
         """ Test remote deletion of folder """
         if DELETE_TESTS:
@@ -199,7 +199,7 @@ class TestWorker(unittest.TestCase):
         else:
             pass
 
-    #@unittest.SkipTest
+    
     def test_worker_snapandrecorded_footage_download_delete_zip(self):
         """ Test our main entry point for downloading both types of footage """
         if DELETE_TESTS:
@@ -221,7 +221,7 @@ class TestWorker(unittest.TestCase):
         else:
             pass
 
-    #@unittest.SkipTest
+    
     def test_get_file_size(self):
         self.init_worker()
         abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + \

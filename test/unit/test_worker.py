@@ -41,7 +41,30 @@ class TestWorker(unittest.TestCase):
         """ Supply different args """
         self.worker = Worker(mock_worker.conn, args)
 
-    #@unittest.SkipTest
+    def test_log_error(self):
+        # Arrange
+        logger = umock.MagicMock()
+        logger.error = umock.MagicMock()
+        expected = "fake error"
+
+        # Act
+        with umock.patch("foscambackup.worker.Worker.logger", logger):
+            self.worker.log_error(expected)
+
+        # Assert
+        self.assertEqual([call(expected)], logger.error.call_args_list)
+    
+    def test_update_conf(self):
+        # Arrange
+        initial_config = Config()
+        initial_config.host = "not_existing"
+
+        # Act
+        self.worker.update_conf(Config())
+
+        # Assert
+        self.assertNotEqual(initial_config, self.worker.conf)
+
     def test_check_currently_recording(self):
         """ Test the behavior of setting the current_recording value to true/false """
         self.worker.check_currently_recording()
@@ -52,7 +75,6 @@ class TestWorker(unittest.TestCase):
         self.worker.check_currently_recording()
         self.assertEqual(self.args['conf'].currently_recording, False)
 
-    #@unittest.SkipTest
     def test_read_sdrec_content(self):
         """ Test the behavior of setting the current_recording value to true/false """
         file_handle = bytes(helper.get_current_date_time_rounded(), 'ascii')
@@ -63,7 +85,6 @@ class TestWorker(unittest.TestCase):
         self.worker.read_sdrec_content(file_handle)
         self.assertEqual(self.args['conf'].currently_recording, False)
 
-    #@unittest.SkipTest
     def test_get_files(self):
         """  Test that the expected functions get called, and proper mode objects are used """
         result = []
@@ -77,8 +98,6 @@ class TestWorker(unittest.TestCase):
         mocked_footage = umock.MagicMock(side_effect=get_footage)
         check_done = umock.MagicMock(side_effect=check_done_folders)
 
-        # mock_worker.conn.reset_mock()
-
         with umock.patch('foscambackup.worker.Worker.get_footage', mocked_footage), \
                 umock.patch('foscambackup.worker.Worker.check_folder_done', check_done):
             self.worker.get_files()
@@ -91,7 +110,6 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(mock_worker.conn.method_calls,
                              calls, "Called check_currently_recording")
 
-    ##@unittest.SkipTest
     def test_get_footage(self):
         self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
 
@@ -141,20 +159,16 @@ class TestWorker(unittest.TestCase):
             self.assertEqual(self.worker.progress_objects[3].done_files, 4)
             self.assertEqual(self.worker.progress_objects[4].done_files, 4)
 
-    #@unittest.SkipTest
     def test_init_zip_folder(self):
-        # verify initialized dict for given folder key
+        """ verify initialized dict for given folder key """
         self.worker.init_zip_folder("record/20160601")
         verify = {"record/20160601": {"zipped": 0,
                                       "remote_deleted": 0, "local_deleted": 0}}
         self.assertDictEqual(self.worker.folder_actions, verify)
 
-    @unittest.SkipTest
     def test_zip_local_files_folder(self):
         """ Verify correct paths are constructed while creating zipfile """
         import time
-        self.args['output_path'] = "D:/output"
-        self.init_worker(self.args)
         folder = "record/20170911"
 
         def write(*args, **kwargs):
@@ -186,6 +200,9 @@ class TestWorker(unittest.TestCase):
         def copyfileobj(src, dest, length):
             return True
 
+        def makedirs(path):
+            return ""
+
         class MockedStructure(bytes):
             def __enter__(self):
                 return read
@@ -211,8 +228,12 @@ class TestWorker(unittest.TestCase):
         open_mocked.write = umock.MagicMock(name="write", side_effect=write)
         open_mocked.header_offset = 10
         open_mocked.buffer = str()
-        shutil = umock.MagicMock()
 
+        osmakedirs = umock.MagicMock()
+        osmakedirs.makedirs = umock.MagicMock(side_effect=makedirs)
+        osmakedirs.mkdir = umock.MagicMock()
+
+        shutil = umock.MagicMock()
         shutil.copyfileobj = umock.MagicMock(side_effect=copyfileobj)
 
         with umock.patch("os.listdir", ospath_listdir), \
@@ -221,14 +242,17 @@ class TestWorker(unittest.TestCase):
                 umock.patch("os.stat", os_stat), \
                 umock.patch("builtins.open", open_mocked), \
                 umock.patch("io.open", open_mocked), \
+                umock.patch("os.mkdir", osmakedirs.mkdir), \
+                umock.patch("os.makedirs", osmakedirs.makedirs), \
                 umock.patch("shutil.copyfileobj", shutil):
-            self.worker.init_zip_folder(folder)
-            self.worker.zip_local_files_folder(folder)
+                    self.args['output_path'] = "D:/output"
+                    self.init_worker(self.args)
+                    self.worker.init_zip_folder(folder)
+                    self.worker.zip_local_files_folder(folder)
 
         verify_listdir = [call('D:/output/record/20170911')]
         self.assertListEqual(ospath_listdir.call_args_list, verify_listdir)
-        verify_exists = [call('D:/output/record'),
-                         call('D:/output/record/20170911')]
+        verify_exists = [call('D:/output'), call('D:/output/record'), call('D:/output/record/20170911')]
         self.assertListEqual(ospath_exists.call_args_list, verify_exists)
         caller = [call('D:/output/record/20170911/12345.avi'),
                   call('D:/output/record/20170911/34562.avi')]
@@ -240,7 +264,6 @@ class TestWorker(unittest.TestCase):
                             call('D:/output/record/20170911/34562.avi', 'rb')]
         self.assertListEqual(open_mocked.call_args_list, verify_open_mock)
 
-    #@unittest.SkipTest
     def test_delete_local_folder(self):
         # verify cleanup directories is called
         # verify folder_action local_deleted is set to True
@@ -258,8 +281,7 @@ class TestWorker(unittest.TestCase):
         verify = {folder: {"zipped": 0, "remote_deleted": 0, "local_deleted": 1}}
         self.assertListEqual(m_helper.call_args_list, [call('/output/record/20170101')])
         self.assertDictEqual(self.worker.folder_actions, verify)
-
-    #@unittest.SkipTest
+   
     def test_set_remote_deleted(self):
         """ Verify remote deleted value is set to 1 """
         folder = "record/20170101"
@@ -269,7 +291,6 @@ class TestWorker(unittest.TestCase):
         verify = {folder: {"zipped": 0, "remote_deleted": 1, "local_deleted": 0}}
         self.assertDictEqual(self.worker.folder_actions, verify)
 
-    #@unittest.SkipTest
     def test_get_remote_deleted(self):
         folder = "record/20170101"
         self.worker.init_zip_folder(folder)  # important
@@ -278,7 +299,6 @@ class TestWorker(unittest.TestCase):
         self.worker.set_remote_deleted(folder)
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
-    #@unittest.SkipTest
     def test_recursive_delete(self):
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
         folder = "snap/20170101"
@@ -311,7 +331,6 @@ class TestWorker(unittest.TestCase):
             mock_worker.conn.rmd.call_args_list, deleted_dirs)
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
-    #@unittest.SkipTest
     def test_delete_remote_folder(self):
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
         folder = "snap/20170101"
@@ -347,7 +366,6 @@ class TestWorker(unittest.TestCase):
                              delete_dir, msg="Normal delete path")
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
-    #@unittest.SkipTest
     def test_check_done_folders(self):
         def check_done_folder():
             return True
@@ -366,19 +384,17 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(check_done.call_args_list, [call()])
         self.assertListEqual(zip_and_delete.call_args_list, verify)
 
-    # #@unittest.SkipTest
-    # def test_load_and_init_from_previous(self):
-    #     read_file = READ_S.read()
-    #     path = 'record/20160501'
-    #     listt = []
-    #     def generic(progress):
-    #         progress.load_and_init(read_file)
+    def test_load_and_init_from_previous(self):
+        read_file = READ_S.read()
+        path = 'record/20160501'
+        list_of_files = []
+        def generic(progress):
+            progress.load_and_init(read_file)
 
-    #     with umock.patch('foscambackup.progress.Progress.read_previous_progress_file',):
-    #         listt = self.worker.load_and_init_from_previous(read_file)
-    #         self.assertDictEqual(listt[0].done_progress, {"done":1, "path":path, "files":{}})
-
-    #@unittest.SkipTest
+        with umock.patch('foscambackup.progress.Progress.read_previous_progress_file',):
+            list_of_files = self.worker.load_and_init_from_previous(read_file)
+            self.assertDictEqual(list_of_files[0].done_progress, {"done":0, "path":path, "files":{}})
+  
     def test_zip_and_delete(self):
         """ Verify the logic, actual deletion and zipping should be tested already. """
         def clean_folder(folder):
@@ -403,7 +419,6 @@ class TestWorker(unittest.TestCase):
             self.assertListEqual(clean.call_args_list, [call(folder)])
             self.assertListEqual(delete.call_args_list, verify_delete)
 
-    #@unittest.SkipTest
     def test_check_folder_state_delete(self):
         def delete_method(fullpath, folder):
             self.worker.set_remote_deleted(folder)
@@ -427,8 +442,7 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(callback.call_args_list, [call(
             '/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101', 'record/20170101')])
         self.assertTrue(self.worker.get_remote_deleted(folder), 1)
-
-    #@unittest.SkipTest
+    
     def test_crawl_folder(self):
         # count recursion and calls to craw_files.
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd2
@@ -464,20 +478,17 @@ class TestWorker(unittest.TestCase):
             self.assertListEqual(crawl.call_args_list, verify_list,
                                  msg="Failed to verify the calls")
 
-    #@unittest.SkipTest
     def test_crawl_files(self):
         # check call to previous_progress
         # check call to not_dat_file
         # check call to add_file_init and retrieve_and_write_file
         pass
 
-    #@unittest.SkipTest
     def test_retrieve_and_write_file(self):
         # check call to download_file
         # check call to add_file_done
         pass
 
-    #@unittest.SkipTest
     def test_download_file(self):
         # call to verify path
         # call to ftp_helper.retr

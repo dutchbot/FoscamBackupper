@@ -17,7 +17,7 @@ READ_S = mock_file_helper.READ_S
 WRITE = mock_file_helper.WRITE
 
 
-#@unittest.SkipTest
+
 class TestProgress(unittest.TestCase):
     """ Test all the progress methods """
     def setUp(self):
