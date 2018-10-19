@@ -17,7 +17,7 @@ READ_S = mock_file_helper.READ_S
 WRITE = mock_file_helper.WRITE
 
 
-#@unittest.SkipTest
+
 class TestProgress(unittest.TestCase):
     """ Test all the progress methods """
     def setUp(self):
@@ -27,6 +27,10 @@ class TestProgress(unittest.TestCase):
     def tearDown(self):
         APPEND.buffer = ""
         WRITE.buffer = ""
+
+    def test_progress__init__(self):
+        with self.assertRaises(ValueError):
+            Progress(["mock/me"])
 
     def test_load_and_init(self):
         """ Test the load function"""
@@ -65,6 +69,21 @@ class TestProgress(unittest.TestCase):
         self.assertEqual(self.progress.is_max_files_reached(), False)
         self.progress.max_files = 4
         self.assertEqual(self.progress.is_max_files_reached(), False)
+
+    def test_add_file_init_given_empty_done_progress(self):
+        # Arrange
+        self.progress.done_progress = None
+        def init_done_progress(*args, **kwargs):
+            self.progress.done_progress = {"files":{}}
+        initialize_done_progress = umock.MagicMock(side_effect=init_done_progress)
+        filename = "12345.avi"
+
+        # Act
+        with umock.patch("foscambackup.progress.Progress.initialize_done_progress", initialize_done_progress):
+            self.progress.add_file_init(filename)
+
+        # Assert
+        self.assertEqual(initialize_done_progress.call_count, 1)
 
     def test_add_file_init(self):
         filename = "avi2345.avi"
@@ -180,9 +199,18 @@ class TestProgress(unittest.TestCase):
             writer(WRITE, args)
 
         WRITE.open_write_file = umock.Mock(side_effect=mocked_open_write_file)
+        os = umock.MagicMock()
+        os.path = umock.MagicMock()
+        os.path.isfile = umock.MagicMock(return_value=True)
+        os.remove = umock.MagicMock()
 
         self.progress.done_progress = folders
-        with umock.patch('foscambackup.util.file_helper.open_write_file', WRITE.open_write_file):
-            result = self.progress.save_progress_for_unfinished()
-            self.assertEqual(result, True)
-            self.assertEqual(WRITE.buffer, args['enc'])
+        with umock.patch('foscambackup.util.file_helper.open_write_file', WRITE.open_write_file), \
+            umock.patch("os.path.isfile", os.path.isfile), \
+            umock.patch("os.remove", os.remove):
+                result = self.progress.save_progress_for_unfinished()
+                self.assertEqual(result, True)
+                self.assertEqual(WRITE.buffer, args['enc'])
+                self.assertEqual(os.path.isfile.call_count, 1)
+                self.assertEqual(os.remove.call_count, 1)
+

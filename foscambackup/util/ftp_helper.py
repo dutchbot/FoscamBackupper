@@ -37,6 +37,7 @@ def select_folder(folders=[]):
 def mlsd(con, path):
     """ Cleans the dot and dotdot folders """
     file_list = con.mlsd(path)
+    cleaned = None
     if file_list:
         cleaned = [i for i in file_list if helper.check_not_curup(i[0])]
     if cleaned is None:

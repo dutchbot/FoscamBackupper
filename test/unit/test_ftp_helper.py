@@ -9,7 +9,7 @@ import foscambackup.util.ftp_helper as ftp_helper
 CONN = copy.deepcopy(mock_worker.conn) # Fix for reusing static conn
 call = umock.call
 
-#@unittest.SkipTest
+
 class TestFtpHelper(unittest.TestCase):
 
     def test_close_connection(self):
@@ -49,7 +49,11 @@ class TestFtpHelper(unittest.TestCase):
         self.assertEqual(CONN.sendcmd.call_args_list, [call(fullpath)])
 
     def test_retrieve_model_serial(self):
-        pass
+        dirname = "FXXX_CXX"
+        mlsd = umock.MagicMock(return_value=[(".", "664"), ("..", "664"), (dirname, "664")])
+        with umock.patch("foscambackup.util.ftp_helper.mlsd", mlsd):
+            result = ftp_helper.retrieve_model_serial(umock.MagicMock())
+            self.assertEqual(result, dirname)       
 
     def test_select_folder(self):
         compare = "CWD /IPCamera"
@@ -60,7 +64,7 @@ class TestFtpHelper(unittest.TestCase):
     def test_mlsd(self):
         def mlsd(*args, **kwargs):
             yield (".", {'type':'folder'})
-            yield (".", {'type':'folder'})
+            yield ("..", {'type':'folder'})
             if(args[0] != ""):
                 yield ("record", {'type':'folder'})
                 yield ("snap", {'type':'folder'})
@@ -71,6 +75,10 @@ class TestFtpHelper(unittest.TestCase):
         self.assertListEqual(result, [("record", {'type':'folder'}), ("snap", {'type':'folder'})])
         result = ftp_helper.mlsd(CONN, "")
         self.assertListEqual(result, [])
+        with self.assertRaises(ValueError):
+            mlsdmock = umock.MagicMock()
+            mlsdmock.mlsd = umock.MagicMock(return_value=None)
+            ftp_helper.mlsd(mlsdmock, "empty")
 
     def test_retr(self):
         def caller(bin_file):

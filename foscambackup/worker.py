@@ -8,8 +8,7 @@ import ftplib
 from zipfile import ZipFile
 from zipfile import ZIP_LZMA
 
-# own classes
-from foscambackup.file_wrapper import FileWrapper
+from foscambackup.download_file_tracker import DownloadFileTracker
 from foscambackup.constant import Constant
 from foscambackup.progress import Progress
 import foscambackup.util.helper as helper
@@ -17,8 +16,7 @@ import foscambackup.util.ftp_helper as ftp_helper
 import foscambackup.util.file_helper as file_helper
 
 class Worker:
-    """ Retrieves files for us """
-    # static variable
+    """ Lists, Downloads, Deletes and Zips files """
     logger = logging.getLogger('Worker')
 
     def log_debug(self, msg):
@@ -42,7 +40,7 @@ class Worker:
         self.args = args
         self.conf = args['conf']
         self.folder_actions = {}
-        # Static
+
         Progress.max_files = args["max_files"]
         if args["output_path"][-1:] == "":
             self.log_debug("Using current dir")
@@ -161,7 +159,7 @@ class Worker:
                 progress.save_progress()
                 sys.exit()
 
-            if helper.not_check_subdir(subdir, foldername) is False:
+            if helper.check_not_sub_dir(subdir, foldername) is False:
                 continue
     
             abs_path = helper.get_abs_path(self.conf, mode)
@@ -315,7 +313,7 @@ class Worker:
                             'arg_key': 'delete_rm', 'folder': folder, 'fullpath': fullpath}
             self.check_folder_state_delete(delete_state, self.delete_remote_folder)
         else:
-            raise ValueError("No conf.model value!")
+            raise ValueError("No model serial value found!")
 
     def check_folder_state_delete(self, delete_state, callback):
         """ Remote and local deletion of folder """
@@ -371,7 +369,7 @@ class Worker:
         try:
             helper.verify_path(loc_info['abs_path'], loc_info['mode'])
             byte_size = ftp_helper.size(self.connection, loc_info['abs_path'])
-            wrapper = FileWrapper(local_file_path, byte_size)
+            wrapper = DownloadFileTracker(local_file_path, byte_size)
             call = wrapper.write_to_file
             self.log_info("Downloading... " + loc_info['filename'])
             ftp_helper.retr(self.connection, ftp_helper.create_retrcmd(

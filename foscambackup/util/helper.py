@@ -2,7 +2,10 @@
 import os
 import time
 import shutil
+import logging
 from foscambackup.constant import Constant
+
+logger = logging.getLogger('Worker')
 
 def slash():
     """ return slash in use """
@@ -43,10 +46,9 @@ def cleanup_directories(folder):
 
 def on_error(func, path, exc_info):
     """ Callback function for OS errors when deleting a folder tree """
-    print("Calling error")
-    print(func)
-    print(path)
-    print(exc_info)
+    logger.error(func)
+    logger.error(path)
+    logger.error(exc_info)
 
 def get_cwd():
     """ Get the current working directory """
@@ -61,7 +63,7 @@ def clean_newline_char(line):
 def verify_path(path, mode):
     """ Verify we constructed a valid remote path """
     import re
-    regex = '\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}'
+    regex = r'\/[a-zA-Z]{8}\/([A-Z0-9]){6,7}_([A-Z0-9]){12}\/[a-z]{4,6}\/[0-9]{8}\/[0-9]{8}-[0-9]{6}'
     sep = mode['separator']
     if sep == '_':
         regex = regex[:-9] + regex[-9:].replace('-', sep, 1)
@@ -98,7 +100,7 @@ def check_valid_folderkey(folder):
         return True
     raise ValueError("Foldername truncated!")
 
-def not_check_subdir(subdir, foldername):
+def check_not_sub_dir(subdir, foldername):
     """ Verify our current folder is not a subdirectory """
     if subdir:
         return not foldername in subdir['subdirs']

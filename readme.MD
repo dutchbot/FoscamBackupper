@@ -1,3 +1,4 @@
+[![Coverage Status](https://coveralls.io/repos/github/dutchbot/FoscamBackupper/badge.svg?branch=develop)](https://coveralls.io/github/dutchbot/FoscamBackupper?branch=develop)
 ![GitHub Logo](https://travis-ci.org/dutchbot/FoscamBackupper.svg?branch=master)
 [![Build status](https://ci.appveyor.com/api/projects/status/pypbqfr3k08in3sq?svg=true)](https://ci.appveyor.com/project/dutchbot/foscambackupper)
 

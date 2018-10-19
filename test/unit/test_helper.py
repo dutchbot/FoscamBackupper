@@ -4,7 +4,7 @@ import unittest
 import unittest.mock as umock
 import time
 
-#@unittest.SkipTest
+
 class TestHelper(unittest.TestCase):
 
     def test_sl(self):
@@ -50,7 +50,7 @@ class TestHelper(unittest.TestCase):
             helper.cleanup_directories("testfolder")
         self.assertEqual(shutil.called, True)
 
-    def test_on_error(self):
+    def test_cleanup_directories_with_error(self):
         def rmtree(*args, **kwargs):
             """ mocked """
             return args
@@ -64,6 +64,14 @@ class TestHelper(unittest.TestCase):
         calls = [umock.call.rmtree(
             'testfolder', ignore_errors=False, onerror=shutil.on_error)]
         self.assertListEqual(shutil.method_calls, calls)
+
+    def test_on_error(self):
+        logger = umock.MagicMock()
+        logger.error = umock.MagicMock()
+        with umock.patch("foscambackup.util.helper.logger", logger):
+            helper.on_error("test","C:\\","bleh")
+            calls = [umock.call.error("test"), umock.call.error("C:\\"), umock.call.error("bleh")]
+            self.assertListEqual(logger.method_calls, calls)
 
     def test_clean_newline_char(self):
         val = "test\n"
@@ -101,6 +109,8 @@ class TestHelper(unittest.TestCase):
     def test_construct_path(self):
         self.assertEqual(helper.construct_path("test",['mytest','ofc']), "test/mytest/ofc")
         self.assertEqual(helper.construct_path("test",['mytest','ofc'], True), "test/mytest/ofc/")
+        with self.assertRaises(TypeError):
+            helper.construct_path("test",{'mytest','ofc'})
 
     def test_check_valid_folderkey(self):
         folder = "record/20160501"
