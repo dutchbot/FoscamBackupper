@@ -159,7 +159,7 @@ class Worker:
                 progress.save_progress()
                 sys.exit()
 
-            if helper.not_check_subdir(subdir, foldername) is False:
+            if helper.check_not_sub_dir(subdir, foldername) is False:
                 continue
     
             abs_path = helper.get_abs_path(self.conf, mode)
