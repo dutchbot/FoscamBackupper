@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from test.integration.test_worker import TestWorker as TestIntegrationWorker
 from test.unit.test_config_factory import TestConfigFactory
+from test.unit.test_command_parser import TestCommandParser
 from test.unit.test_file_wrapper import TestFileWrapper
 from test.unit.test_file_helper import TestFileHelper
 from test.unit.test_ftp_helper import TestFtpHelper
