@@ -4,6 +4,8 @@ install:
   - "pip install -r requirements.txt"
   - "pip install coveralls"
 before_script: export PYTHONPATH=$PYTHONPATH:$(pwd)
-script: python test/run.py --cov coveralls
+script: 
+  - python test/run.py
+  - coveralls run --source=foscambackup test/run.py
 after_success:
   - coveralls
