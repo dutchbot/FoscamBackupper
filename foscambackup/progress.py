@@ -52,7 +52,7 @@ class Progress:
             return False
 
     def check_done_folder(self):
-        """ Check if folder was already done """
+        """ Check if folder is done by counting the files downloaded """
         count_files = 0
         count_downloaded = 0
         for _, downloaded in self.done_progress["files"].items():

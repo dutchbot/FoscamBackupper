@@ -53,9 +53,9 @@ def get_current_date():
     """ This is the format for the date folder where the subfolders and files will be located. """
     return helper.get_current_date()
 
-def get_current_date_time_rounded(sep='_'):
+def get_current_date_time_rounded(custom_time, sep='_'):
     """ This how the foscam model constructs the subfolders located in a date folder. """
-    return time.strftime("%Y%m%d"+sep+"%H0000")
+    return time.strftime("%Y%m%d"+sep+"%H0000", custom_time)
 
 def get_current_date_offset_day():
     """ Get current date and offset the day """
@@ -228,11 +228,11 @@ def mock_dir(conf):
     """
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded(time.localtime()))
     generate_mocked_record_file(new_path + slash())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded('-'))
+    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda:get_current_date_time_rounded(time.localtime(), '-'))
     generate_mocked_snap_file(new_path + slash())
 
     sdrec_file_path = Constant.base_folder+slash()+Constant.sd_rec
@@ -244,7 +244,7 @@ def mock_dir(conf):
 def mock_dir_offset_subdir(conf):
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date, get_current_date_time_rounded_offset)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date, lambda: get_current_date_time_rounded_offset())
     generate_mocked_record_file(new_path + slash())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
@@ -254,11 +254,11 @@ def mock_dir_offset_subdir(conf):
 def mock_dir_offset_parentdir(conf):
     dir_structure = "IPCamera/" + conf.model + "/record"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, get_current_date_time_rounded)
+    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, lambda: get_current_date_time_rounded(time.localtime()))
     generate_mocked_record_file(new_path + slash())
     dir_structure = "IPCamera/" + conf.model + "/snap"
     create_dir(dir_structure)
-    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, lambda: get_current_date_time_rounded('-'))
+    new_path = generate_date_folders_remote(dir_structure, get_current_date_offset_day, lambda: get_current_date_time_rounded(time.localtime(),'-'))
     generate_mocked_snap_file(new_path + slash())
 
 def get_args_obj():

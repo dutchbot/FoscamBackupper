@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 from io import StringIO
 import unittest.mock as umock
@@ -77,7 +78,7 @@ class TestWorker(unittest.TestCase):
 
     def test_read_sdrec_content(self):
         """ Test the behavior of setting the current_recording value to true/false """
-        file_handle = bytes(helper.get_current_date_time_rounded(), 'ascii')
+        file_handle = bytes(helper.get_current_date_time_rounded(time.localtime()), 'ascii')
         self.worker.read_sdrec_content(file_handle)
         self.assertEqual(self.args['conf'].currently_recording, True)
         file_handle = bytes(
@@ -133,7 +134,7 @@ class TestWorker(unittest.TestCase):
             self.assertDictEqual(result[1], MODE_SNAP)
 
     def test_get_footage(self):
-        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
+        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"
 
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
 
@@ -165,7 +166,7 @@ class TestWorker(unittest.TestCase):
                 umock.patch("foscambackup.util.file_helper.open_appendonly_file", mock_file_helper.APPEND):
             # RECORDING
             file_handle = bytes(
-                helper.get_current_date_time_rounded(), 'ascii')
+                helper.get_current_date_time_rounded(time.localtime()), 'ascii')
             self.worker.read_sdrec_content(file_handle)
             self.worker.get_footage(MODE_SNAP)
             self.assertEqual(self.worker.progress_objects[0].done_files, 4)
@@ -181,6 +182,51 @@ class TestWorker(unittest.TestCase):
             self.assertEqual(self.worker.progress_objects[3].done_files, 4)
             self.assertEqual(self.worker.progress_objects[4].done_files, 4)
 
+    def test_get_footage_skip_folder(self):
+        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"
+
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
+
+        def readlines():
+            return "20160501"
+
+        def makedirs(path):
+            return ""
+
+        def download_file(loc_info):
+            import foscambackup.util.helper
+            foscambackup.util.helper.verify_path(
+                loc_info['abs_path'], loc_info['mode'])
+            return True
+
+        download = umock.MagicMock()
+        download.download_file = umock.MagicMock(side_effect=download_file)
+
+        osmakedirs = umock.MagicMock()
+        osmakedirs.makedirs = umock.MagicMock(side_effect=makedirs)
+        osmakedirs.isfile = umock.MagicMock(side_effect=makedirs)
+
+        log_info = umock.MagicMock()
+
+        progress1 = Progress("snap/20170101")
+        progress1.done_progress = {"done": 1,"path":"snap/20170101", "files": { "12345,jpg":1 }}
+        progress2 = Progress("snap/20170102")
+        progress2.done_progress = {"done": 0,"path":"snap/20170102", "files":{ "12345,jpg":1 }}
+        mock_open = umock.MagicMock(name="open",return_value=[progress1, progress2], spec=str)
+        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
+            umock.patch("foscambackup.worker.Worker.log_info", log_info), \
+            umock.patch("os.makedirs", osmakedirs), \
+            umock.patch("os.path.isfile", osmakedirs), \
+            umock.patch("foscambackup.util.file_helper.open_readonly_file", mock_open), \
+            umock.patch("foscambackup.util.file_helper.open_appendonly_file", mock_file_helper.APPEND):
+                local_time = time.localtime()
+                file_handle = bytes(helper.get_current_date_time_rounded(local_time), 'ascii')
+                self.worker.read_sdrec_content(file_handle)
+                self.worker.get_footage(MODE_SNAP)
+                self.assertIn(call("Skipping current date, because currently recording."), log_info.call_args_list)
+                self.assertIn(call("Skipping current recording folder: 20170101"), log_info.call_args_list)
+                self.assertIn(call("skipping folder because already done"), log_info.call_args_list)
+
     def test_init_zip_folder(self):
         """ verify initialized dict for given folder key """
         self.worker.init_zip_folder("record/20160601")
@@ -190,7 +236,6 @@ class TestWorker(unittest.TestCase):
 
     def test_zip_local_files_folder(self):
         """ Verify correct paths are constructed while creating zipfile """
-        import time
         folder = "record/20170911"
 
         def write(*args, **kwargs):
@@ -499,19 +544,3 @@ class TestWorker(unittest.TestCase):
                     'desc': {'type': _type}}, instance))
             self.assertListEqual(crawl.call_args_list, verify_list,
                                  msg="Failed to verify the calls")
-
-    def test_crawl_files(self):
-        # check call to previous_progress
-        # check call to not_dat_file
-        # check call to add_file_init and retrieve_and_write_file
-        pass
-
-    def test_retrieve_and_write_file(self):
-        # check call to download_file
-        # check call to add_file_done
-        pass
-
-    def test_download_file(self):
-        # call to verify path
-        # call to ftp_helper.retr
-        pass

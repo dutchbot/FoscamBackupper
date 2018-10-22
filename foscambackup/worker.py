@@ -128,7 +128,7 @@ class Worker:
                 for prev_progress in already_processed:
                     if prev_progress.done_progress["done"] == 1 and prev_progress.cur_folder == progress.cur_folder:
                         skip = True
-                        # perhaps check for remote_deleted, zipped and local_deleted?
+                    # take the previous progress to optimize download of files
                     elif prev_progress.cur_folder == progress.cur_folder and prev_progress.done_progress["done"] == 0:
                         progress = prev_progress
 
