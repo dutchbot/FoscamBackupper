@@ -392,6 +392,24 @@ class TestWorker(unittest.TestCase):
             mock_worker.conn.rmd.call_args_list, deleted_dirs)
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
+    def test_recursive_delete_exceptions(self):
+        import ftplib
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+
+        log_info = umock.MagicMock()
+        log_error = umock.MagicMock()
+
+        with umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", umock.MagicMock(side_effect=ftplib.error_perm)):
+                self.worker.recursive_delete(fullpath, folder)
+                self.assertListEqual(log_error.call_args_list, [call("No such file or directory! Tried: " + fullpath)])
+
+        with umock.patch("foscambackup.worker.Worker.log_info", log_info), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", umock.MagicMock(side_effect=ftplib.error_temp)):
+                self.worker.recursive_delete(fullpath, folder)
+                self.assertListEqual(log_info.call_args_list, [call("Recursive strategy to clean folder"), call("Timeout when deleting..")])
+
     def test_delete_remote_folder(self):
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
         folder = "snap/20170101"
