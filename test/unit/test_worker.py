@@ -138,9 +138,6 @@ class TestWorker(unittest.TestCase):
 
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
 
-        def readlines():
-            return "20160501"
-
         def makedirs(path):
             return ""
 
@@ -156,7 +153,7 @@ class TestWorker(unittest.TestCase):
         osmakedirs.makedirs = umock.MagicMock(side_effect=makedirs)
         osmakedirs.isfile = umock.MagicMock(side_effect=makedirs)
         progress = Progress("record/20160501")
-        progress.done_progress = {"done":"0","path":"record/20160501"}
+        progress.done_progress = {"done": 0, "path":"record/20160501"}
         mock_open = umock.MagicMock(name="open",return_value=[progress], spec=str)
 
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
@@ -186,9 +183,6 @@ class TestWorker(unittest.TestCase):
         self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"
 
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
-
-        def readlines():
-            return "20160501"
 
         def makedirs(path):
             return ""
@@ -455,8 +449,6 @@ class TestWorker(unittest.TestCase):
         read_file = READ_S.read()
         path = 'record/20160501'
         list_of_files = []
-        def generic(progress):
-            progress.load_and_init(read_file)
 
         with umock.patch('foscambackup.progress.Progress.read_previous_progress_file',):
             list_of_files = self.worker.load_and_init_from_previous(read_file)
@@ -544,3 +536,24 @@ class TestWorker(unittest.TestCase):
                     'desc': {'type': _type}}, instance))
             self.assertListEqual(crawl.call_args_list, verify_list,
                                  msg="Failed to verify the calls")
+
+    def test_crawl_folder_max_files(self):
+        # count recursion and calls to craw_files.
+        self.worker.conf.model = "FXXXXX_CEEEEEEEEEEE"
+        parent = "20170101"
+        subdir = {"subdirs":["201701011500"], "path":"","current":"20170101"}
+        file_list = [("201701011500", {'type': 'dir'})]
+
+        progress = umock.MagicMock()
+        progress.is_max_files_reached = umock.MagicMock(return_value = True)
+        progress.save_progress = umock.MagicMock()
+        exit_mock = umock.MagicMock()
+
+        with umock.patch("foscambackup.progress.Progress.is_max_files_reached", progress.is_max_files_reached), \
+            umock.patch("foscambackup.progress.Progress.save", progress.save_progress), \
+            umock.patch("sys.exit", exit_mock):
+                instance = Progress("snap/20170101")
+                self.worker.crawl_folder(file_list, MODE_SNAP, instance, parent, subdir)
+                self.assertEqual(progress.is_max_files_reached.call_count, 1)
+                self.assertEqual(progress.save_progress.call_count, 1)
+                self.assertEqual(exit_mock.call_count, 1)

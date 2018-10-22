@@ -100,8 +100,8 @@ def check_valid_folderkey(folder):
         return True
     raise ValueError("Foldername truncated!")
 
-def check_not_sub_dir(subdir, foldername):
+def is_subdir(subdir, foldername):
     """ Verify our current folder is not a subdirectory """
     if subdir:
-        return not foldername in subdir['subdirs']
-    return True
+        return foldername in subdir['subdirs']
+    return False

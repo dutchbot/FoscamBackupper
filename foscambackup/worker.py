@@ -155,11 +155,11 @@ class Worker:
         self.log_debug("Found subdirs: "+ str(file_list))
         for foldername, desc in file_list:
             # do not add the time period folders
-            if progress.is_max_files_reached() is True:
-                progress.save_progress()
+            if progress.is_max_files_reached():
+                progress.save()
                 sys.exit()
 
-            if helper.check_not_sub_dir(subdir, foldername) is False:
+            if helper.is_subdir(subdir, foldername):
                 continue
     
             abs_path = helper.get_abs_path(self.conf, mode)
