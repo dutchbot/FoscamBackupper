@@ -1,5 +1,6 @@
 import os
 import time
+import ftplib
 import unittest
 from io import StringIO
 import unittest.mock as umock
@@ -393,7 +394,6 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
     def test_recursive_delete_exceptions(self):
-        import ftplib
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
         folder = "snap/20170101"
 
@@ -444,6 +444,47 @@ class TestWorker(unittest.TestCase):
         self.assertListEqual(mock_worker.conn.rmd.call_args_list,
                              delete_dir, msg="Normal delete path")
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
+
+    def test_delete_remote_folder_exceptions(self):
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+        self.worker.args['dry_run'] = 0
+        self.worker.args['delete_rm'] = 1
+
+        mock_worker.conn.rmd = umock.MagicMock(side_effect=ftplib.error_temp("Connection timeout."))
+        ftp_helper = umock.MagicMock()
+        ftp_helper.open_connection = umock.MagicMock()
+        log_error = umock.MagicMock()
+        delete_remote_folder = umock.MagicMock()
+
+        original_delete_remote_folder = self.worker.delete_remote_folder
+        with umock.patch("foscambackup.util.ftp_helper.open_connection", ftp_helper.open_connection), \
+            umock.patch("foscambackup.util.ftp_helper.close_connection", ftp_helper.close_connection), \
+            umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.worker.Worker.delete_remote_folder", delete_remote_folder):
+                original_delete_remote_folder(fullpath, folder)
+                # assert key error
+                self.assertListEqual(log_error.call_args_list, [call("Folder key was not initialized in zipped folders list!")])
+                self.assertListEqual(delete_remote_folder.call_args_list, [call(fullpath, folder)])
+
+                ftp_helper.reset_mock()
+                log_error.reset_mock()
+                delete_remote_folder.reset_mock()
+                log_info = umock.MagicMock()
+                log_debug = umock.MagicMock()
+
+                with umock.patch("foscambackup.worker.Worker.get_remote_deleted", umock.MagicMock(return_value=0)), \
+                    umock.patch("foscambackup.worker.Worker.log_debug", log_debug), \
+                    umock.patch("foscambackup.worker.Worker.log_info", log_info):
+                        original_delete_remote_folder(fullpath, folder)
+                        self.assertListEqual([call("Connection timeout.")], log_debug.call_args_list)
+                        self.assertListEqual([call(mock_worker.conn)], ftp_helper.close_connection.call_args_list)
+                        self.assertListEqual([call(self.worker.args['conf'])], ftp_helper.open_connection.call_args_list)
+                        self.assertListEqual([call("Deleting remote folder.."), 
+                                                call(fullpath), 
+                                                call("Timeout so reopening connection right now .."),
+                                                call("Reinitate deletion of remote folder.")], log_info.call_args_list)
+                        self.assertListEqual(delete_remote_folder.call_args_list, [call(fullpath, folder)])
 
     def test_check_done_folders(self):
         def check_done_folder():
