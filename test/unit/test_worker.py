@@ -486,6 +486,22 @@ class TestWorker(unittest.TestCase):
                                                 call("Reinitate deletion of remote folder.")], log_info.call_args_list)
                         self.assertListEqual(delete_remote_folder.call_args_list, [call(fullpath, folder)])
 
+    def test_delete_remote_folder_dry_run(self):
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+        self.worker.args['dry_run'] = 1
+        self.worker.args['delete_rm'] = 1
+
+        log_info = umock.MagicMock()
+        set_remote_deleted = umock.MagicMock()
+
+        with umock.patch("foscambackup.worker.Worker.get_remote_deleted", umock.MagicMock(return_value=0)), \
+            umock.patch("foscambackup.worker.Worker.set_remote_deleted", set_remote_deleted), \
+            umock.patch("foscambackup.worker.Worker.log_info", log_info):
+                self.worker.delete_remote_folder(fullpath, folder)
+                self.assertListEqual([call("Not deleting remote folder")], log_info.call_args_list)
+                self.assertEqual(set_remote_deleted.call_count , 1)
+
     def test_check_done_folders(self):
         def check_done_folder():
             return True
