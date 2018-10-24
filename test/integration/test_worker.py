@@ -225,7 +225,7 @@ class TestWorker(unittest.TestCase):
     def test_get_file_size(self):
         self.init_worker()
         abs_path = "/IPCamera/"+self.conf.model + "/snap/" + helper.get_current_date() + \
-        "/" + helper.get_current_date_time_rounded("-") + \
+        "/" + helper.get_current_date_time_rounded(time.localtime(), "-") + \
         "/" + helper.get_current_date_time("-") + ".jpg"
         self.assertEqual(ftp_helper.size(self.connection, abs_path), 2048)
 

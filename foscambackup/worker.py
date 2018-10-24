@@ -128,7 +128,7 @@ class Worker:
                 for prev_progress in already_processed:
                     if prev_progress.done_progress["done"] == 1 and prev_progress.cur_folder == progress.cur_folder:
                         skip = True
-                        # perhaps check for remote_deleted, zipped and local_deleted?
+                    # take the previous progress to optimize download of files
                     elif prev_progress.cur_folder == progress.cur_folder and prev_progress.done_progress["done"] == 0:
                         progress = prev_progress
 
@@ -155,11 +155,11 @@ class Worker:
         self.log_debug("Found subdirs: "+ str(file_list))
         for foldername, desc in file_list:
             # do not add the time period folders
-            if progress.is_max_files_reached() is True:
-                progress.save_progress()
+            if progress.is_max_files_reached():
+                progress.save()
                 sys.exit()
 
-            if helper.check_not_sub_dir(subdir, foldername) is False:
+            if helper.is_subdir(subdir, foldername):
                 continue
     
             abs_path = helper.get_abs_path(self.conf, mode)

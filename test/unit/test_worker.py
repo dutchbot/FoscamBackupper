@@ -1,4 +1,6 @@
 import os
+import time
+import ftplib
 import unittest
 from io import StringIO
 import unittest.mock as umock
@@ -77,7 +79,7 @@ class TestWorker(unittest.TestCase):
 
     def test_read_sdrec_content(self):
         """ Test the behavior of setting the current_recording value to true/false """
-        file_handle = bytes(helper.get_current_date_time_rounded(), 'ascii')
+        file_handle = bytes(helper.get_current_date_time_rounded(time.localtime()), 'ascii')
         self.worker.read_sdrec_content(file_handle)
         self.assertEqual(self.args['conf'].currently_recording, True)
         file_handle = bytes(
@@ -133,12 +135,9 @@ class TestWorker(unittest.TestCase):
             self.assertDictEqual(result[1], MODE_SNAP)
 
     def test_get_footage(self):
-        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"  # verified with regex
+        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"
 
         mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
-
-        def readlines():
-            return "20160501"
 
         def makedirs(path):
             return ""
@@ -155,7 +154,7 @@ class TestWorker(unittest.TestCase):
         osmakedirs.makedirs = umock.MagicMock(side_effect=makedirs)
         osmakedirs.isfile = umock.MagicMock(side_effect=makedirs)
         progress = Progress("record/20160501")
-        progress.done_progress = {"done":"0","path":"record/20160501"}
+        progress.done_progress = {"done": 0, "path":"record/20160501"}
         mock_open = umock.MagicMock(name="open",return_value=[progress], spec=str)
 
         with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
@@ -165,7 +164,7 @@ class TestWorker(unittest.TestCase):
                 umock.patch("foscambackup.util.file_helper.open_appendonly_file", mock_file_helper.APPEND):
             # RECORDING
             file_handle = bytes(
-                helper.get_current_date_time_rounded(), 'ascii')
+                helper.get_current_date_time_rounded(time.localtime()), 'ascii')
             self.worker.read_sdrec_content(file_handle)
             self.worker.get_footage(MODE_SNAP)
             self.assertEqual(self.worker.progress_objects[0].done_files, 4)
@@ -181,6 +180,48 @@ class TestWorker(unittest.TestCase):
             self.assertEqual(self.worker.progress_objects[3].done_files, 4)
             self.assertEqual(self.worker.progress_objects[4].done_files, 4)
 
+    def test_get_footage_skip_folder(self):
+        self.args['conf'].model = "FXXXXX_CEEEEEEEEEEE"
+
+        mock_worker.conn.mlsd.side_effect = mock_ftp.mlsd
+
+        def makedirs(path):
+            return ""
+
+        def download_file(loc_info):
+            import foscambackup.util.helper
+            foscambackup.util.helper.verify_path(
+                loc_info['abs_path'], loc_info['mode'])
+            return True
+
+        download = umock.MagicMock()
+        download.download_file = umock.MagicMock(side_effect=download_file)
+
+        osmakedirs = umock.MagicMock()
+        osmakedirs.makedirs = umock.MagicMock(side_effect=makedirs)
+        osmakedirs.isfile = umock.MagicMock(side_effect=makedirs)
+
+        log_info = umock.MagicMock()
+
+        progress1 = Progress("snap/20170101")
+        progress1.done_progress = {"done": 1,"path":"snap/20170101", "files": { "12345,jpg":1 }}
+        progress2 = Progress("snap/20170102")
+        progress2.done_progress = {"done": 0,"path":"snap/20170102", "files":{ "12345,jpg":1 }}
+        mock_open = umock.MagicMock(name="open",return_value=[progress1, progress2], spec=str)
+        with umock.patch("foscambackup.worker.Worker.download_file", download.download_file), \
+            umock.patch("foscambackup.worker.Worker.log_info", log_info), \
+            umock.patch("os.makedirs", osmakedirs), \
+            umock.patch("os.path.isfile", osmakedirs), \
+            umock.patch("foscambackup.util.file_helper.open_readonly_file", mock_open), \
+            umock.patch("foscambackup.util.file_helper.open_appendonly_file", mock_file_helper.APPEND):
+                local_time = time.localtime()
+                file_handle = bytes(helper.get_current_date_time_rounded(local_time), 'ascii')
+                self.worker.read_sdrec_content(file_handle)
+                self.worker.get_footage(MODE_SNAP)
+                self.assertIn(call("Skipping current date, because currently recording."), log_info.call_args_list)
+                self.assertIn(call("Skipping current recording folder: 20170101"), log_info.call_args_list)
+                self.assertIn(call("skipping folder because already done"), log_info.call_args_list)
+
     def test_init_zip_folder(self):
         """ verify initialized dict for given folder key """
         self.worker.init_zip_folder("record/20160601")
@@ -190,7 +231,6 @@ class TestWorker(unittest.TestCase):
 
     def test_zip_local_files_folder(self):
         """ Verify correct paths are constructed while creating zipfile """
-        import time
         folder = "record/20170911"
 
         def write(*args, **kwargs):
@@ -353,6 +393,23 @@ class TestWorker(unittest.TestCase):
             mock_worker.conn.rmd.call_args_list, deleted_dirs)
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
+    def test_recursive_delete_exceptions(self):
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+
+        log_info = umock.MagicMock()
+        log_error = umock.MagicMock()
+
+        with umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", umock.MagicMock(side_effect=ftplib.error_perm)):
+                self.worker.recursive_delete(fullpath, folder)
+                self.assertListEqual(log_error.call_args_list, [call("No such file or directory! Tried: " + fullpath)])
+
+        with umock.patch("foscambackup.worker.Worker.log_info", log_info), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", umock.MagicMock(side_effect=ftplib.error_temp)):
+                self.worker.recursive_delete(fullpath, folder)
+                self.assertListEqual(log_info.call_args_list, [call("Recursive strategy to clean folder"), call("Timeout when deleting..")])
+
     def test_delete_remote_folder(self):
         fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
         folder = "snap/20170101"
@@ -388,6 +445,63 @@ class TestWorker(unittest.TestCase):
                              delete_dir, msg="Normal delete path")
         self.assertEqual(self.worker.get_remote_deleted(folder), 1)
 
+    def test_delete_remote_folder_exceptions(self):
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+        self.worker.args['dry_run'] = 0
+        self.worker.args['delete_rm'] = 1
+
+        mock_worker.conn.rmd = umock.MagicMock(side_effect=ftplib.error_temp("Connection timeout."))
+        ftp_helper = umock.MagicMock()
+        ftp_helper.open_connection = umock.MagicMock()
+        log_error = umock.MagicMock()
+        delete_remote_folder = umock.MagicMock()
+
+        original_delete_remote_folder = self.worker.delete_remote_folder
+        with umock.patch("foscambackup.util.ftp_helper.open_connection", ftp_helper.open_connection), \
+            umock.patch("foscambackup.util.ftp_helper.close_connection", ftp_helper.close_connection), \
+            umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.worker.Worker.delete_remote_folder", delete_remote_folder):
+                original_delete_remote_folder(fullpath, folder)
+                # assert key error
+                self.assertListEqual(log_error.call_args_list, [call("Folder key was not initialized in zipped folders list!")])
+                self.assertListEqual(delete_remote_folder.call_args_list, [call(fullpath, folder)])
+
+                ftp_helper.reset_mock()
+                log_error.reset_mock()
+                delete_remote_folder.reset_mock()
+                log_info = umock.MagicMock()
+                log_debug = umock.MagicMock()
+
+                with umock.patch("foscambackup.worker.Worker.get_remote_deleted", umock.MagicMock(return_value=0)), \
+                    umock.patch("foscambackup.worker.Worker.log_debug", log_debug), \
+                    umock.patch("foscambackup.worker.Worker.log_info", log_info):
+                        original_delete_remote_folder(fullpath, folder)
+                        self.assertListEqual([call("Connection timeout.")], log_debug.call_args_list)
+                        self.assertListEqual([call(mock_worker.conn)], ftp_helper.close_connection.call_args_list)
+                        self.assertListEqual([call(self.worker.args['conf'])], ftp_helper.open_connection.call_args_list)
+                        self.assertListEqual([call("Deleting remote folder.."), 
+                                                call(fullpath), 
+                                                call("Timeout so reopening connection right now .."),
+                                                call("Reinitate deletion of remote folder.")], log_info.call_args_list)
+                        self.assertListEqual(delete_remote_folder.call_args_list, [call(fullpath, folder)])
+
+    def test_delete_remote_folder_dry_run(self):
+        fullpath = "/IPCamera/FXXXXX_CEEEEEEEEEEE/snap/20170101"
+        folder = "snap/20170101"
+        self.worker.args['dry_run'] = 1
+        self.worker.args['delete_rm'] = 1
+
+        log_info = umock.MagicMock()
+        set_remote_deleted = umock.MagicMock()
+
+        with umock.patch("foscambackup.worker.Worker.get_remote_deleted", umock.MagicMock(return_value=0)), \
+            umock.patch("foscambackup.worker.Worker.set_remote_deleted", set_remote_deleted), \
+            umock.patch("foscambackup.worker.Worker.log_info", log_info):
+                self.worker.delete_remote_folder(fullpath, folder)
+                self.assertListEqual([call("Not deleting remote folder")], log_info.call_args_list)
+                self.assertEqual(set_remote_deleted.call_count , 1)
+
     def test_check_done_folders(self):
         def check_done_folder():
             return True
@@ -410,8 +524,6 @@ class TestWorker(unittest.TestCase):
         read_file = READ_S.read()
         path = 'record/20160501'
         list_of_files = []
-        def generic(progress):
-            progress.load_and_init(read_file)
 
         with umock.patch('foscambackup.progress.Progress.read_previous_progress_file',):
             list_of_files = self.worker.load_and_init_from_previous(read_file)
@@ -500,18 +612,71 @@ class TestWorker(unittest.TestCase):
             self.assertListEqual(crawl.call_args_list, verify_list,
                                  msg="Failed to verify the calls")
 
-    def test_crawl_files(self):
-        # check call to previous_progress
-        # check call to not_dat_file
-        # check call to add_file_init and retrieve_and_write_file
-        pass
+    def test_crawl_folder_max_files(self):
+        # count recursion and calls to craw_files.
+        self.worker.conf.model = "FXXXXX_CEEEEEEEEEEE"
+        parent = "20170101"
+        subdir = {"subdirs":["201701011500"], "path":"","current":"20170101"}
+        file_list = [("201701011500", {'type': 'dir'})]
 
-    def test_retrieve_and_write_file(self):
-        # check call to download_file
-        # check call to add_file_done
-        pass
+        progress = umock.MagicMock()
+        progress.is_max_files_reached = umock.MagicMock(return_value = True)
+        progress.save_progress = umock.MagicMock()
+        exit_mock = umock.MagicMock()
+
+        with umock.patch("foscambackup.progress.Progress.is_max_files_reached", progress.is_max_files_reached), \
+            umock.patch("foscambackup.progress.Progress.save", progress.save_progress), \
+            umock.patch("sys.exit", exit_mock):
+                instance = Progress("snap/20170101")
+                self.worker.crawl_folder(file_list, MODE_SNAP, instance, parent, subdir)
+                self.assertEqual(progress.is_max_files_reached.call_count, 1)
+                self.assertEqual(progress.save_progress.call_count, 1)
+                self.assertEqual(exit_mock.call_count, 1)
 
     def test_download_file(self):
-        # call to verify path
-        # call to ftp_helper.retr
-        pass
+        loc_info = {'mode':'snap', 'parent_dir': "20170101", 'abs_path': "output\\b", 'filename': "test.jpg", 'desc':"file", 'folderpath':""}
+
+        log_debug = umock.MagicMock()
+        log_error = umock.MagicMock()
+        mlsd = umock.MagicMock(return_value=["aad.jpg"])
+
+        with umock.patch("foscambackup.worker.Worker.log_debug", log_debug), \
+            umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", mlsd):
+            
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock(side_effect=ftplib.error_perm("550 denied"))):
+                self.worker.download_file(loc_info)
+                self.assertListEqual([call("Tried path: " + loc_info['abs_path']), 
+                                    call("Tried path: " + str(mlsd.return_value)),
+                                    call(loc_info['abs_path']),
+                                    call("Retrieve and write file: " +loc_info['filename'] + " " + "550 denied")], log_error.call_args_list)
+
+            log_error.reset_mock()
+            log_debug.reset_mock()
+
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock(side_effect=ValueError("incorrect value"))):
+                self.worker.download_file(loc_info)
+                self.assertListEqual([call(loc_info['abs_path'] + " : " + "incorrect value")], log_error.call_args_list)
+            
+            open_connection = umock.MagicMock()
+            download_file = umock.MagicMock()
+            delete_file = umock.MagicMock()
+            log_error.reset_mock()
+            log_debug.reset_mock()
+
+            original_download_file = self.worker.download_file
+
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock()), \
+                umock.patch("foscambackup.worker.Worker.log_info", umock.MagicMock()), \
+                umock.patch("builtins.open", umock.MagicMock()), \
+                umock.patch("foscambackup.util.ftp_helper.size", umock.MagicMock()), \
+                umock.patch("foscambackup.util.ftp_helper.open_connection", open_connection), \
+                umock.patch("foscambackup.util.ftp_helper.retr", umock.MagicMock(side_effect=EOFError)), \
+                umock.patch("foscambackup.util.ftp_helper.create_retrcmd", umock.MagicMock()), \
+                umock.patch("foscambackup.download_file_tracker.DownloadFileTracker.write_to_file", umock.MagicMock()), \
+                umock.patch("foscambackup.download_file_tracker.DownloadFileTracker.delete_file", delete_file), \
+                umock.patch("foscambackup.worker.Worker.download_file", download_file):
+                    original_download_file(loc_info)
+                    self.assertEqual(open_connection.called, True)
+                    self.assertEqual(delete_file.called, True)
+                    self.assertEqual(download_file.called, True)
