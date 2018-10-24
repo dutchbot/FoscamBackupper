@@ -632,3 +632,51 @@ class TestWorker(unittest.TestCase):
                 self.assertEqual(progress.is_max_files_reached.call_count, 1)
                 self.assertEqual(progress.save_progress.call_count, 1)
                 self.assertEqual(exit_mock.call_count, 1)
+
+    def test_download_file(self):
+        loc_info = {'mode':'snap', 'parent_dir': "20170101", 'abs_path': "output\\b", 'filename': "test.jpg", 'desc':"file", 'folderpath':""}
+
+        log_debug = umock.MagicMock()
+        log_error = umock.MagicMock()
+        mlsd = umock.MagicMock(return_value=["aad.jpg"])
+
+        with umock.patch("foscambackup.worker.Worker.log_debug", log_debug), \
+            umock.patch("foscambackup.worker.Worker.log_error", log_error), \
+            umock.patch("foscambackup.util.ftp_helper.mlsd", mlsd):
+            
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock(side_effect=ftplib.error_perm("550 denied"))):
+                self.worker.download_file(loc_info)
+                self.assertListEqual([call("Tried path: " + loc_info['abs_path']), 
+                                    call("Tried path: " + str(mlsd.return_value)),
+                                    call(loc_info['abs_path']),
+                                    call("Retrieve and write file: " +loc_info['filename'] + " " + "550 denied")], log_error.call_args_list)
+
+            log_error.reset_mock()
+            log_debug.reset_mock()
+
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock(side_effect=ValueError("incorrect value"))):
+                self.worker.download_file(loc_info)
+                self.assertListEqual([call(loc_info['abs_path'] + " : " + "incorrect value")], log_error.call_args_list)
+            
+            open_connection = umock.MagicMock()
+            download_file = umock.MagicMock()
+            delete_file = umock.MagicMock()
+            log_error.reset_mock()
+            log_debug.reset_mock()
+
+            original_download_file = self.worker.download_file
+
+            with umock.patch("foscambackup.util.helper.verify_path", umock.MagicMock()), \
+                umock.patch("foscambackup.worker.Worker.log_info", umock.MagicMock()), \
+                umock.patch("builtins.open", umock.MagicMock()), \
+                umock.patch("foscambackup.util.ftp_helper.size", umock.MagicMock()), \
+                umock.patch("foscambackup.util.ftp_helper.open_connection", open_connection), \
+                umock.patch("foscambackup.util.ftp_helper.retr", umock.MagicMock(side_effect=EOFError)), \
+                umock.patch("foscambackup.util.ftp_helper.create_retrcmd", umock.MagicMock()), \
+                umock.patch("foscambackup.download_file_tracker.DownloadFileTracker.write_to_file", umock.MagicMock()), \
+                umock.patch("foscambackup.download_file_tracker.DownloadFileTracker.delete_file", delete_file), \
+                umock.patch("foscambackup.worker.Worker.download_file", download_file):
+                    original_download_file(loc_info)
+                    self.assertEqual(open_connection.called, True)
+                    self.assertEqual(delete_file.called, True)
+                    self.assertEqual(download_file.called, True)
